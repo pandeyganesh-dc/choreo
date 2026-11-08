@@ -1,6 +1,7 @@
-description: Delete one pipeline of a connector by name
+description: Go to a connector's pipelines and delete one by name
 params:
   connector:           # required: which connector
   pipeline:            # required: pass pipeline=<name>
 steps:
+  - goToConfiguredPipelines: { connector: $connector }
   - deletePipeline: { connector: $connector, pipeline: $pipeline }

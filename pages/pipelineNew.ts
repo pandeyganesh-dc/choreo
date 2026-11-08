@@ -2,14 +2,29 @@
 // Steps: 1 pick a pipeline type → 2 report details (fields) → 3 scheduling → 4 dataset name.
 import { Page } from '@playwright/test';
 
+// Step 2's Fields picker: the innermost block holding both lists and the Add All button
+const fieldPicker = (page: Page) =>
+  page.locator('div')
+    .filter({ has: page.getByRole('button', { name: 'move all right' }) })
+    .filter({ has: page.getByRole('list') })
+    .last();
+// Each list also holds an empty <li> placeholder; real fields are items with a heading (the field name)
+const fieldList = (page: Page, i: 0 | 1) =>
+  fieldPicker(page).getByRole('list').nth(i).getByRole('listitem').filter({ has: page.getByRole('heading') });
+
 export const pipelineNew = (page: Page) => ({
   // Step 1: each pipeline type is a card whose title is a level-3 heading (e.g. "Regular")
   typeCard: (type: string) => page.getByRole('heading', { name: type, exact: true, level: 3 }),
   // Step 1 has a Next button above and below the cards; later steps have one
   nextBtn: page.getByRole('button', { name: 'Next', exact: true }).first(),
 
-  // Step 2: the "Add All" button's accessible name is its aria-label
+  // Step 2 "Report Details": the part that differs per report. Every report has a Fields picker:
+  // two lists, available (left) and selected (right). Clicking an available field moves it right.
+  // The "Add All" button's accessible name is its aria-label.
   addAllFields: page.getByRole('button', { name: 'move all right' }),
+  availableField: (name: string) => fieldList(page, 0).filter({ has: page.getByText(name, { exact: true }) }),
+  selectedField: (name: string) => fieldList(page, 1).filter({ has: page.getByText(name, { exact: true }) }),
+  selectedFields: fieldList(page, 1),
 
   // Step 3
   manualRunOnly: page.getByRole('switch', { name: 'Manual Run Only' }),

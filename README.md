@@ -45,6 +45,7 @@ steps:
 - There's no "run all": flows change d-l state and can conflict. To run several things in order, write a flow for it.
 - `forEach` repeats steps once per item of a list (`$item` is the current one; rename it with `as:`):
   ```yaml
+  - goToConfiguredPipelines: { connector: Regression }
   - listPipelines: { connector: Regression, as: list }
   - forEach: $list.names
     steps:
@@ -66,6 +67,14 @@ steps:
   - create-and-run-pipeline: { connector: Regression, as: run }
   - expectRunStatus: { connector: Regression, pipeline: $run.pipeline }
   ```
+- Flows can live in subfolders of `flows/`; a flow's name is its file name, so names must be unique.
+- Creating a pipeline is report-specific: each connector + report gets its own flow in `flows/create_pipeline/`,
+  named `create_pipeline_<connector>_<report>`. Its params are exactly what that report asks for in "Report Details":
+  ```bash
+  npm run flow create_pipeline_regress_regular              # all fields
+  npm run flow create_pipeline_regress_regular fields=foo   # chosen fields (comma-separated)
+  ```
+  From another flow: `- create_pipeline_regress_regular: { as: p }` then use `$p.pipeline`.
 - Name test-only flows `testing-*.yaml` and don't commit them.
 
 Need an operation that doesn't exist yet? Ask Claude to *"add a task that …"*.

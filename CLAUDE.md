@@ -17,9 +17,16 @@ Playwright (TypeScript) UI automation against a local d-l (frontend `localhost:3
 Use existing flows and tasks (`npm run list`). Only add a task if an operation is missing.
 Give a flow `outputs:` when callers may need what it created (e.g. `warehouse`, `pipeline`).
 Flows named `testing-*` are scratch flows; never commit them.
+Pipeline creation is per connector + report: `flows/create_pipeline/create_pipeline_<connector>_<report>.yaml`. It fixes the
+connector and report, takes only that report's "Report Details" values as params, and outputs `pipeline`.
+Explore the report's step 2 first; if it has inputs beyond Fields, the wizard tasks need extending.
 
 ## Task rules
 - Atomic: one operation on ONE thing (deletePipeline, not "delete all"). Repetition belongs in flows (`forEach`).
+- Anything that would repeat inside tasks becomes its own task (per Ganesh). Navigation is the main case: going to a
+  screen is one task (`goToConfiguredPipelines`), acting on it is another (`deletePipeline`, `listPipelines`), and a flow
+  joins them (`delete-pipeline`). Tasks that act on the current screen check they're on the right one
+  (`expectOnConfiguredPipelines`) and fail if not; they never navigate there themselves.
 - UI only: a task knows only what a user can see on screen (no DB/API). listPipelines returns only the visible page.
   If a user couldn't figure something out from the UI, that's a product gap to fix, not something to work around.
 - Strict: do exactly what the name says, or throw a clear error. Never silently "fix" state.
@@ -49,12 +56,17 @@ Flows named `testing-*` are scratch flows; never commit them.
 - After a delete, the "N Configured Data Pipelines" header sometimes stays stale until you navigate away. Don't assert on it right after.
 - Any popup left open (e.g. the link modal after unlinking) hides the sidebar from roles; `readySidebar` presses Escape first.
 - ETL in the sidebar opens a flyout (My Connectors = linked ones only; All Connectors = every connector, with search).
+  That search filters in the browser (no server call), so results are final the moment the name is typed: check once,
+  never wait for a card. It ignores case and matches parts of names; choreo requires the exact name (`.Connector-title1`
+  on each card, the app's own class) and otherwise fails at once, listing what the search found.
 - A connector's warehouse can be unlinked only after all its pipelines are deleted and the page is refreshed.
   The unlink button holds a `LinkOffIcon` and stays disabled while pipelines exist.
 - MUI icons are aria-hidden but carry `data-testid="<IconName>"` (e.g. `DeleteOutlineOutlinedIcon`). Use `getByTestId` for icon-only buttons.
 - Pipeline delete uses a browser `confirm()`: register `page.once('dialog', d => d.accept())` before clicking.
 - With 0 pipelines the Configured Data Pipelines tab renders no table and no search box. Read the "N Configured Data Pipelines" header first.
 - Create-pipeline wizard: the "Add All" fields button is named `move all right` (its aria-label). "Run after save" is ticked by default.
+  Only step 2 ("Report Details") differs per report. Its Fields picker has two lists (available, selected); clicking an
+  available field moves it over. Each list also has an empty `<li>`, so count only items with a heading.
 - A pipeline's page header shows "(Last Run - STATUS)". It reads QUEUED/RUNNING while a run is in progress and "No Run Initiated" before any run.
 - Actions and checks are separate tasks. Checks are named `expect…` and only look at the UI (no DB or API).
 

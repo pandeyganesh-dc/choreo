@@ -1,4 +1,4 @@
-// Finds every task (tasks/*.ts) and flow (flows/*.yaml) and checks flows before anything runs.
+// Finds every task (tasks/*.ts) and flow (flows/**/*.yaml) and checks flows before anything runs.
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
@@ -33,11 +33,22 @@ export function loadTasks(): Record<string, Task> {
   return tasks;
 }
 
+// Flows may sit in subfolders (e.g. flows/create_pipeline/); the file name alone is the flow's name, so it must be unique.
+const flowFiles = (dir: string): string[] =>
+  fs.readdirSync(dir, { withFileTypes: true })
+    .flatMap(e => (e.isDirectory() ? flowFiles(path.join(dir, e.name)) : /\.ya?ml$/.test(e.name) ? [path.join(dir, e.name)] : []))
+    .sort();
+
 export function loadFlows(): Record<string, Flow> {
   const flows: Record<string, Flow> = {};
-  for (const f of files('flows', /\.ya?ml$/)) {
-    const name = path.basename(f).replace(/\.ya?ml$/, '');
-    const doc = YAML.parse(fs.readFileSync(path.join(ROOT, 'flows', f), 'utf8')) ?? {};
+  const where: Record<string, string> = {};
+  const dir = path.join(ROOT, 'flows');
+  for (const file of fs.existsSync(dir) ? flowFiles(dir) : []) {
+    const name = path.basename(file).replace(/\.ya?ml$/, '');
+    const rel = path.relative(ROOT, file);
+    if (where[name]) throw new Error(`Two flows named "${name}": ${where[name]} and ${rel}`);
+    where[name] = rel;
+    const doc = YAML.parse(fs.readFileSync(file, 'utf8')) ?? {};
     flows[name] = {
       name,
       description: doc.description,

@@ -44,6 +44,8 @@ const allConnectors = (page: Page) => {
   return {
     search: panel.getByRole('textbox', { name: 'search' }),
     card: (name: string) => panel.getByText(name, { exact: true }),
+    // Every card's name (the app's own class for it; there's no role or label to use)
+    cardNames: panel.locator('.Connector-title1'),
   };
 };
 
@@ -56,10 +58,18 @@ export async function goToConnector(page: Page, name: string): Promise<boolean> 
   const d = datasource(page);
   await s.etl.click();
   await s.allConnectors.click();
+  // The search filters in the browser, so the results are final as soon as the name is typed: check once, no waiting.
+  // It ignores case and matches parts of names, so require a card with exactly this name.
+  await expect(c.cardNames.first()).toBeVisible(); // page loaded: the full list is shown before typing
   await c.search.fill(name);
-  await c.card(name).click({ timeout: 15_000 }).catch(() => {
-    throw new Error(`No connector named "${name}" under ETL → All Connectors`);
-  });
+  const shown = (await c.cardNames.allInnerTexts()).map(t => t.trim());
+  if (!shown.includes(name)) {
+    throw new Error(
+      `No connector named "${name}" under ETL → All Connectors (names are case-sensitive). ` +
+        (shown.length ? `Search shows: ${shown.join(', ')}` : 'Search found nothing.'),
+    );
+  }
+  await c.card(name).click();
   await expect(d.addPipelinesText).toBeVisible();
   await expect(d.title(name)).toBeVisible();
   const linked = await d.addPipelinesText.isEnabled();
@@ -71,4 +81,15 @@ export async function goToConnector(page: Page, name: string): Promise<boolean> 
 export async function configuredPipelineCount(page: Page) {
   const text = await datasource(page).configuredCount.innerText();
   return parseInt(text, 10);
+}
+
+// Strict "where am I" check for tasks that work on the current page instead of navigating:
+// the screen must be this connector's page with the Configured Data Pipelines tab open.
+export async function expectOnConfiguredPipelines(page: Page, connector: string) {
+  const d = datasource(page);
+  const here =
+    (await d.title(connector).isVisible()) &&
+    (await d.configuredTab.isVisible()) &&
+    (await d.configuredTab.getAttribute('aria-selected')) === 'true';
+  if (!here) throw new Error(`Not on "${connector}" → Configured Data Pipelines. Run goToConfiguredPipelines first.`);
 }

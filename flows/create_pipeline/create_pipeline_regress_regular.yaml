@@ -1,0 +1,10 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# Params are only what this report asks for in "Report Details" (wizard step 2).
+# Regression → Regular asks for fields only (it has one field: foo).
+description: Create a manual-run Regular pipeline on Regression. Does not run it.
+params:
+  fields: all          # "all", or names as shown in the picker, e.g. fields=foo
+outputs:
+  pipeline: $p.name
+steps:
+  - createPipeline: { connector: Regression, type: Regular, fields: $fields, as: p }
