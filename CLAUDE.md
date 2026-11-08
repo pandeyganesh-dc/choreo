@@ -34,6 +34,9 @@ Use existing tasks (`npm run list`). Only add a task if an operation is missing.
 - MUI icons are aria-hidden but carry `data-testid="<IconName>"` (e.g. `DeleteOutlineOutlinedIcon`). Use `getByTestId` for icon-only buttons.
 - Pipeline delete uses a browser `confirm()`: register `page.once('dialog', d => d.accept())` before clicking.
 - With 0 pipelines the Configured Data Pipelines tab renders no table and no search box. Read the "N Configured Data Pipelines" header first.
+- Create-pipeline wizard: the "Add All" fields button is named `move all right` (its aria-label). "Run after save" is ticked by default.
+- A pipeline's page header shows "(Last Run - STATUS)". It reads QUEUED/RUNNING while a run is in progress and "No Run Initiated" before any run.
+- Actions and checks are separate tasks. Checks are named `expect…` and only look at the UI (no DB or API).
 
 ## Done means
 `npm run flow <a flow using the new task>` passes 3 times in a row (add `-- --repeat-each=3`).

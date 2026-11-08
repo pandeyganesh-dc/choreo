@@ -6,7 +6,7 @@ import { STATE_FILE } from './core/login';
 export default defineConfig({
   testDir: 'core',
   testMatch: 'flows.spec.ts',
-  timeout: 3 * 60_000,              // d-l's Vite dev server is slow on first load
+  timeout: 30 * 60_000,             // a whole flow (incl. waiting for pipeline runs) must fit in this
   expect: { timeout: 30_000 },
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
