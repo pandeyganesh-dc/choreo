@@ -6,7 +6,7 @@ import { pipeline, openPipeline, lastRunStatus } from '../pages/pipeline';
 export default defineTask({
   description: 'Click "Run Pipeline" on a pipeline. Does not wait for the run to finish.',
   inputs: {
-    connector: { required: true, description: 'Connector slug, e.g. regress' },
+    connector: { required: true, description: 'Connector name as shown in the UI, e.g. Regression' },
     pipeline: { required: true, description: 'Pipeline (dataset) name' },
   },
   async run(page, { connector, pipeline: name }) {

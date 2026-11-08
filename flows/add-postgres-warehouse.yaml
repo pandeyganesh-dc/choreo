@@ -1,3 +1,5 @@
 description: Add a postgres warehouse pointing at d-l's postgres-warehouse container
+outputs:
+  warehouse: $wh.name
 steps:
-  - addPostgresWarehouse: {}
+  - addPostgresWarehouse: { as: wh }

@@ -1,0 +1,8 @@
+description: Delete every pipeline a user can see on a connector (first page of the list)
+params:
+  connector:           # required: which connector
+steps:
+  - listPipelines: { connector: $connector, as: list }
+  - forEach: $list.names
+    steps:
+      - deletePipeline: { connector: $connector, pipeline: $item }

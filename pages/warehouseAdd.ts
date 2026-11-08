@@ -1,8 +1,7 @@
-// Selectors for /datawarehouse/add. The only place that knows how this screen is built.
+// Selectors for the Add Warehouse screen (Warehouses → + Add New).
 import { Page } from '@playwright/test';
 
 export const warehouseAdd = (page: Page) => ({
-  open: () => page.goto('/datawarehouse/add', { waitUntil: 'networkidle' }),
   // Warehouse cards are identified by their visible name, e.g. 'PostgreSQL', 'MySQL'
   card: (name: string) => page.getByText(name, { exact: true }),
   addDetailsBtn: page.getByRole('button', { name: 'Add Warehouse Details' }),

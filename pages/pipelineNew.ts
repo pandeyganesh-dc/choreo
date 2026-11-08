@@ -1,10 +1,8 @@
-// Selectors for the "Create Data Pipeline" wizard: /datasource/<connector>/report/new
+// Selectors for the "Create Data Pipeline" wizard (connector page → + Data Pipelines)
 // Steps: 1 pick a pipeline type → 2 report details (fields) → 3 scheduling → 4 dataset name.
 import { Page } from '@playwright/test';
 
 export const pipelineNew = (page: Page) => ({
-  open: (connector: string) => page.goto(`/datasource/${connector}/report/new`, { waitUntil: 'networkidle' }),
-
   // Step 1: each pipeline type is a card whose title is a level-3 heading (e.g. "Regular")
   typeCard: (type: string) => page.getByRole('heading', { name: type, exact: true, level: 3 }),
   // Step 1 has a Next button above and below the cards; later steps have one

@@ -1,6 +1,6 @@
-// Selectors for one configured pipeline's page: /datasource/<connector>/detail/editreport/<id>
+// Selectors for one configured pipeline's page (connector → Configured Data Pipelines → click its name)
 import { Page, expect } from '@playwright/test';
-import { datasource, configuredPipelineCount } from './datasource';
+import { datasource, configuredPipelineCount, goToConnector } from './datasource';
 
 export const pipeline = (page: Page) => ({
   title: (name: string) => page.getByRole('heading', { name: `(${name})`, exact: true }),
@@ -8,6 +8,9 @@ export const pipeline = (page: Page) => ({
   // Header text "(Last Run - SUCCESS)", "(Last Run - QUEUED)", "(Last Run - No Run Initiated)" ...
   lastRun: page.getByText(/^\(Last Run - .*\)$/),
   runStarted: page.getByRole('alert').filter({ hasText: 'Configured data pipeline run was successful' }),
+  // "Number Of Runs" tab has the app's own refresh button (no browser reload needed)
+  runsTab: page.getByRole('tab', { name: 'Number Of Runs' }),
+  refreshBtn: page.getByRole('button', { name: 'Refresh Page' }),
 });
 
 // Reads the status from "(Last Run - X)", e.g. "SUCCESS".
@@ -20,7 +23,7 @@ export async function lastRunStatus(page: Page) {
 export async function openPipeline(page: Page, connector: string, name: string) {
   const d = datasource(page);
   const missing = () => new Error(`"${connector}" has no pipeline named "${name}"`);
-  await d.open(connector);
+  await goToConnector(page, connector);
   await expect(d.configuredCount).toBeVisible();
   // With 0 pipelines the tab shows no table (and no search box) at all
   if ((await configuredPipelineCount(page)) === 0) throw missing();

@@ -1,6 +1,8 @@
 description: Create a fresh postgres warehouse and link a connector to it
 params:
-  connector: regress
+  connector:           # required: which connector
+outputs:
+  warehouse: $wh.warehouse
 steps:
-  - addPostgresWarehouse: { as: wh }
-  - linkConnector: { connector: $connector, warehouse: $wh.name }
+  - add-postgres-warehouse: { as: wh }
+  - link-connector: { connector: $connector, warehouse: $wh.warehouse }

@@ -1,6 +1,6 @@
 description: Link a connector to an existing warehouse
 params:
-  connector: regress
-  warehouse: Local Postgres
+  connector:           # required: which connector
+  warehouse:           # required: which warehouse
 steps:
   - linkConnector: { connector: $connector, warehouse: $warehouse }

@@ -1,6 +1,6 @@
 description: Delete all pipelines of a connector, then unlink it from its warehouse
 params:
-  connector: regress
+  connector:           # required: which connector
 steps:
-  - deleteAllPipelines: { connector: $connector }
+  - delete-all-pipelines: { connector: $connector }
   - unlinkConnector: { connector: $connector }

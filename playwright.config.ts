@@ -3,6 +3,11 @@ import { defineConfig } from '@playwright/test';
 import { config } from './config';
 import { STATE_FILE } from './core/login';
 
+// Visible browser (--watch/--headed): the page fills whatever size the window is (a tiling WM like Hyprland
+// sizes it; elsewhere it starts maximized).
+// Headless: fixed size, so screenshots and videos are always the same.
+const headed = process.env.CHOREO_HEADED === '1';
+
 export default defineConfig({
   testDir: 'core',
   testMatch: 'flows.spec.ts',
@@ -12,13 +17,17 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: config.baseURL,
-    viewport: { width: 1440, height: 900 },
+    viewport: headed ? null : { width: 1440, height: 900 },
     navigationTimeout: 90_000,
+    actionTimeout: 30_000,            // a click/fill that can't happen fails fast instead of hanging the whole flow
     // One window per flow: reuse the saved login if there is one (core/login.ts refreshes it)
     storageState: fs.existsSync(STATE_FILE) ? STATE_FILE : undefined,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    launchOptions: { slowMo: Number(process.env.SLOW || 0) }, // set by --watch
+    launchOptions: {
+      slowMo: Number(process.env.SLOW || 0), // set by --watch
+      args: headed ? ['--start-maximized'] : [],
+    },
   },
 });

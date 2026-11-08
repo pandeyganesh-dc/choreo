@@ -1,0 +1,9 @@
+description: Create a pipeline on a linked connector and start a run (does not wait for it to finish)
+params:
+  connector:           # required: which connector
+  type: Regular
+outputs:
+  pipeline: $p.name
+steps:
+  - createPipeline: { connector: $connector, type: $type, as: p }
+  - runPipeline: { connector: $connector, pipeline: $p.name }
