@@ -1,24 +1,25 @@
 {
-  "name": "e2e2",
+  "name": "choreo",
   "version": "1.0.0",
-  "description": "UI end-to-end flows for DataChannel, run against any d-l",
+  "description": "choreograph DataChannel UI flows on any d-l",
   "scripts": {
-    "test": "playwright test",
-    "watch": "playwright test --headed",
-    "ui": "playwright test --ui",
+    "flow": "tsx core/cli.ts flow",
+    "list": "tsx core/cli.ts list",
     "report": "playwright show-report"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pandeyganesh-dc/E2E2.git"
+    "url": "git+https://github.com/pandeyganesh-dc/choreo.git"
   },
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/pandeyganesh-dc/E2E2/issues"
+    "url": "https://github.com/pandeyganesh-dc/choreo/issues"
   },
-  "homepage": "https://github.com/pandeyganesh-dc/E2E2#readme",
+  "homepage": "https://github.com/pandeyganesh-dc/choreo#readme",
   "devDependencies": {
-    "@playwright/test": "^1.65.0"
+    "@playwright/test": "^1.65.0",
+    "tsx": "^4.23.15",
+    "yaml": "^2.9.1"
   },
   "private": true
 }

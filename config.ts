@@ -15,9 +15,6 @@ export const config = {
   email: env('DL_EMAIL', 'local_dev@datachannel.co'),
   password: env('DL_PASSWORD', '123456'),
 
-  // Warehouse a connector gets linked to. 'Local Postgres' is seeded by every d-l.
-  linkWarehouse: env('LINK_WAREHOUSE', 'Local Postgres'),
-
   // d-l's postgres-warehouse container, as seen from inside the docker network
   postgres: {
     host: env('PG_HOST', 'postgres-warehouse'),

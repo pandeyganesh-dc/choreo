@@ -1,0 +1,5 @@
+description: Unlink a connector (fails if it still has pipelines)
+params:
+  connector: regress
+steps:
+  - unlinkConnector: { connector: $connector }

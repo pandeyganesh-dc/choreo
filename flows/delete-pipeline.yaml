@@ -1,0 +1,6 @@
+description: Delete one pipeline of a connector by name
+params:
+  connector: regress
+  pipeline:            # required: pass pipeline=<name>
+steps:
+  - deletePipeline: { connector: $connector, pipeline: $pipeline }

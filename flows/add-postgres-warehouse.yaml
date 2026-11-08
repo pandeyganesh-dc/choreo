@@ -1,0 +1,3 @@
+description: Add a postgres warehouse pointing at d-l's postgres-warehouse container
+steps:
+  - addPostgresWarehouse: {}
