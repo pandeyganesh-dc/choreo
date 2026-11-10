@@ -33,7 +33,7 @@ export function loadTasks(): Record<string, Task> {
   return tasks;
 }
 
-// Flows may sit in subfolders (e.g. flows/create_pipeline/); the file name alone is the flow's name, so it must be unique.
+// Flows may sit in subfolders (e.g. flows/forward/, flows/reverse/); the file name alone is the flow's name, so it must be unique.
 const flowFiles = (dir: string): string[] =>
   fs.readdirSync(dir, { withFileTypes: true })
     .flatMap(e => (e.isDirectory() ? flowFiles(path.join(dir, e.name)) : /\.ya?ml$/.test(e.name) ? [path.join(dir, e.name)] : []))

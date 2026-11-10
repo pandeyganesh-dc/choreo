@@ -17,9 +17,14 @@ Playwright (TypeScript) UI automation against a local d-l (frontend `localhost:3
 Use existing flows and tasks (`npm run list`). Only add a task if an operation is missing.
 Give a flow `outputs:` when callers may need what it created (e.g. `warehouse`, `pipeline`).
 Flows named `testing-*` are scratch flows; never commit them.
-Pipeline creation is per connector + report: `flows/create_pipeline/create_pipeline_<connector>_<report>.yaml`. It fixes the
-connector and report, takes only that report's "Report Details" values as params, and outputs `pipeline`.
-Explore the report's step 2 first; if it has inputs beyond Fields, the wizard tasks need extending.
+Flows that create something per report live in one folder per job type (per Ganesh): `flows/forward/`, `flows/reverse/`,
+later orchestration etc.
+- Forward: `flows/forward/create_pipeline_<connector>_<report>.yaml`. Fixes connector + report, takes the report's
+  "Report Details" values as params, outputs `pipeline`. If step 2 has inputs beyond Fields, extend the wizard tasks.
+- Reverse: `flows/reverse/create_sync_<destination>_<sync>.yaml`. Built from generic steps: goToDestination → startSync
+  (credentials + sync type) → one `selectOption` per "Sync Details" dropdown → saveSync. Outputs `sync`.
+  A new destination usually needs no new code: list its dropdowns as selectOption steps.
+Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_reverse_source` in Local Postgres).
 
 ## Task rules
 - Atomic: one operation on ONE thing (deletePipeline, not "delete all"). Repetition belongs in flows (`forEach`).
@@ -67,6 +72,12 @@ Explore the report's step 2 first; if it has inputs beyond Fields, the wizard ta
 - Create-pipeline wizard: the "Add All" fields button is named `move all right` (its aria-label). "Run after save" is ticked by default.
   Only step 2 ("Report Details") differs per report. Its Fields picker has two lists (available, selected); clicking an
   available field moves it over. Each list also has an empty `<li>`, so count only items with a heading.
+- Reverse ETL mirrors ETL: sidebar flyout My/All Destinations, cards named via `.Connector-title1`, browser-side search.
+  Sync wizard: Credentials → Syncs → Sync Details → Scheduling → Sync Name. "Run after save" is unticked by default there.
+  Sync Details dropdowns are MUI Autocompletes found by label; some only appear after an earlier choice (table after
+  warehouse), and options can be "<name> - <id>" (sheets, worksheets). Save toast: "Configured Sync Added Successfully".
+  A sync's page has "Run Sync" (no confirm dialog; toast "Configured sync run was successful." = triggered, not finished)
+  and "(Last Run - STATUS)". Runs stay QUEUED unless the d-l's `reverse` service is up.
 - A pipeline's page header shows "(Last Run - STATUS)". It reads QUEUED/RUNNING while a run is in progress and "No Run Initiated" before any run.
 - Actions and checks are separate tasks. Checks are named `expect…` and only look at the UI (no DB or API).
 

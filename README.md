@@ -68,13 +68,22 @@ steps:
   - expectRunStatus: { connector: Regression, pipeline: $run.pipeline }
   ```
 - Flows can live in subfolders of `flows/`; a flow's name is its file name, so names must be unique.
-- Creating a pipeline is report-specific: each connector + report gets its own flow in `flows/create_pipeline/`,
-  named `create_pipeline_<connector>_<report>`. Its params are exactly what that report asks for in "Report Details":
-  ```bash
-  npm run flow create_pipeline_regress_regular              # all fields
-  npm run flow create_pipeline_regress_regular fields=foo   # chosen fields (comma-separated)
-  ```
-  From another flow: `- create_pipeline_regress_regular: { as: p }` then use `$p.pipeline`.
+- Creating a pipeline or sync is report-specific, so each gets its own flow, in one folder per job type:
+  - `flows/forward/create_pipeline_<connector>_<report>`: params are what the report asks for in "Report Details".
+    ```bash
+    npm run flow create_pipeline_regress_regular              # all fields
+    npm run flow create_pipeline_regress_regular fields=foo   # chosen fields (comma-separated)
+    ```
+  - `flows/reverse/create_sync_<destination>_<sync>`: params are what the sync asks for in "Sync Details".
+    ```bash
+    npm run flow create_sync_gsheets_export credential=test-choreo sheet=test-sheet-for-choreo \
+      worksheet=Sheet1 "warehouse=Local Postgres" table=choreo_reverse_source
+    ```
+  - From another flow: `- create_pipeline_regress_regular: { as: p }` then use `$p.pipeline` (syncs: `$s.sync`).
+  - Run a sync (doesn't wait for it to finish; needs the d-l's `reverse` service running):
+    `npm run flow run-sync "destination=GoogleSheets Export" sync=<name>`
+- Reverse syncs read from a warehouse table. `seeds/postgres-warehouse.sql` creates a fixed one, `choreo_reverse_source`:
+  `docker exec -i <d-l>-postgres-warehouse-1 psql -U root -d pgs_warehouse < seeds/postgres-warehouse.sql`
 - Name test-only flows `testing-*.yaml` and don't commit them.
 
 Need an operation that doesn't exist yet? Ask Claude to *"add a task that …"*.

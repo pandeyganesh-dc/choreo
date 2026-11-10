@@ -5,6 +5,9 @@ export const sidebar = (page: Page) => ({
   // "ETL" opens a flyout with My Connectors / All Connectors / Data Explorer
   etl: page.getByRole('listitem').filter({ hasText: /^ETL$/ }),
   allConnectors: page.getByRole('link', { name: /^All Connectors/ }),
+  // "Reverse ETL" opens a flyout with My Destinations / All Destinations / Data Models / Segments
+  reverseEtl: page.getByRole('listitem').filter({ hasText: /^Reverse ETL$/ }),
+  allDestinations: page.getByRole('link', { name: /^All Destinations/ }),
   warehouses: page.getByRole('link', { name: 'Datawarehouse Warehouses' }),
 });
 

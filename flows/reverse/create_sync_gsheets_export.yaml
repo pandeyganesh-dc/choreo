@@ -1,0 +1,23 @@
+# One flow per destination + sync type: create_sync_<destination>_<sync>.
+# Params are what this sync asks for in "Sync Details" (wizard step 3), plus which credential to use.
+# Source data: seeds/postgres-warehouse.sql creates choreo_reverse_source in "Local Postgres".
+description: Create a manual-run GoogleSheets Export sync (warehouse table → a worksheet). Does not run it.
+params:
+  credential:          # required: which credential, e.g. test-choreo
+  sheet:               # required: spreadsheet name, e.g. test-sheet-for-choreo
+  worksheet:           # required: worksheet in it, e.g. Sheet1
+  warehouse:           # required: source warehouse, e.g. Local Postgres
+  table:               # required: source table or view, e.g. choreo_reverse_source
+  insertMode: replace  # upsert | replace | append (upsert also needs an Upsert Key)
+outputs:
+  sync: $saved.name
+steps:
+  - goToDestination: { destination: GoogleSheets Export }
+  - startSync: { destination: GoogleSheets Export, credential: $credential, sync: Export }
+  - selectOption: { field: Sheet, option: $sheet }
+  - selectOption: { field: Worksheet Name, option: $worksheet }
+  - selectOption: { field: How do you want to fetch data., option: Fetch From Table/View }
+  - selectOption: { field: Select Data Warehouse, option: $warehouse }
+  - selectOption: { field: Select a table or view, option: $table }
+  - selectOption: { field: Insert Mode, option: $insertMode }
+  - saveSync: { destination: GoogleSheets Export, as: saved }
