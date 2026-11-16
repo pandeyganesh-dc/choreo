@@ -1,0 +1,9 @@
+# Known answer: Schema Inferred: All loads exactly 1 row, every column type inferred.
+description: "Create and run a Schema Inferred: All pipeline on Regression, expect SUCCESS with 1 row"
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_schema_inferred_all: { as: p }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 1 }

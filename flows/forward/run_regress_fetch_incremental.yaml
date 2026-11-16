@@ -1,0 +1,12 @@
+# Known answer: Fetch: Incremental loads 2 new rows per run (entity_id above the warehouse max): 2, then 2 more.
+description: "Create a Fetch: Incremental pipeline on Regression and run it twice, expect 2 rows each time"
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_fetch_incremental: { as: p }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 2 }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 2 }

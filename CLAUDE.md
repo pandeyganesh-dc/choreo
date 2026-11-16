@@ -95,6 +95,10 @@ When a flow fails or behaves oddly, read the run.log first. Log from tasks with 
 - Breadcrumbs (`nav[aria-label=breadcrumb]`): connector page "Connectors / <connector>", pipeline page
   "Connectors / <connector> / Edit Data Pipeline", destination "Destinations / <destination>". A pipeline's name is read
   from its header "<name> (Last Run - X)": the "(<name>)" heading above it only shows when opened from the list.
+- "View Logs" on a run opens an "ETL Run Logs" popup (close icon `CloseIcon`). The viewer only renders visible lines,
+  so use its Search box and read "N match"/"N matches". Its search reacts to key presses (`pressSequentially`), and the
+  first search can run before the log has loaded: retype while it shows 0.
+- Regression Multiprocessing / Child connectors: only "Insert Mode" in step 2, starting empty (must be picked).
 - After creating a pipeline the wizard shows "Congratulations!" with next steps (text, no button role): "View Run Status"
   opens the new pipeline on Number Of Runs. savePipeline uses it, so the next run/check needs no navigation.
   The "/" separators are `li aria-hidden`.

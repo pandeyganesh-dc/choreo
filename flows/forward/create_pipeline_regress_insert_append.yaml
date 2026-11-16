@@ -1,0 +1,11 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# Insert Mode is preset to Append by the report.
+description: "Create a manual-run Insert: Append pipeline on Regression. Does not run it."
+params:
+  fields: all          # "all", or names as shown in the picker
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression, type: "Insert: Append" }
+  - selectFields: { fields: $fields }
+  - savePipeline: { connector: Regression, as: p }

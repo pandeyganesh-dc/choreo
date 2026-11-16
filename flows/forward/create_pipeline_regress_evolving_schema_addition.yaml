@@ -1,0 +1,13 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# "Run" simulates which run this is: 1 = 100 rows, all data types; 2 = adds column _added_column; 3 = also drops _boolean.
+description: Create a manual-run Evolving Schema Addition pipeline on Regression. Does not run it.
+params:
+  run: 1   # which run to simulate: 1, 2 or 3
+  insertMode: Append   # Append | Replace | Upsert
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression, type: Evolving Schema Addition }
+  - selectOption: { field: Insert Mode, option: $insertMode }
+  - fillText: { field: Run, value: $run }
+  - savePipeline: { connector: Regression, as: p }

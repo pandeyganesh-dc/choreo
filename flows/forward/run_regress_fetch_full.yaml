@@ -1,0 +1,12 @@
+# Known answer: Fetch: Full fetches everything every run: 1 row each run.
+description: "Create a Fetch: Full pipeline on Regression and run it twice, expect 1 row each time"
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_fetch_full: { as: p }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 1 }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 1 }

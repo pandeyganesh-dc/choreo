@@ -1,0 +1,8 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# No fields and no parameters: the schema is inferred from the data.
+description: "Create a manual-run Schema Inferred: All pipeline on Regression. Does not run it."
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression, type: "Schema Inferred: All" }
+  - savePipeline: { connector: Regression, as: p }

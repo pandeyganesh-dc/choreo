@@ -1,0 +1,9 @@
+# Known answer: 3 accounts, each fetched by its own process, 10 rows each = 30 rows.
+description: Create and run a Regular pipeline on Regression Multiprocessing Connector, expect SUCCESS with 30 rows
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_multiprocessing_regular: { as: p }
+  - runPipeline: { connector: Regression Multiprocessing Connector, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression Multiprocessing Connector, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression Multiprocessing Connector, pipeline: $p.pipeline, rows: 30 }

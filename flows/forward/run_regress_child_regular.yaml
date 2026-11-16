@@ -1,0 +1,10 @@
+# Known answer: 5 parent rows, each with 2 courses and 2 achievements, each achievement with 2 certificates,
+# split into parent + child tables: 5 + 10 + 10 + 20 = 45 rows.
+description: Create and run a Regular pipeline on Regression Child Connector, expect SUCCESS with 45 rows (parent + child tables)
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_child_regular: { as: p }
+  - runPipeline: { connector: Regression Child Connector, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression Child Connector, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression Child Connector, pipeline: $p.pipeline, rows: 45 }

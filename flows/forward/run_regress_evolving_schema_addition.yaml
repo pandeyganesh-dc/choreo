@@ -1,0 +1,18 @@
+# Known answer: Evolving Schema Addition loads 100 rows every run. Run 2 adds column _added_column, run 3 also stops
+# sending _boolean: both are handled, so every run is SUCCESS with 100 rows.
+description: Create an Evolving Schema Addition pipeline, run it with Run=1, 2 and 3, expect SUCCESS with 100 rows each time
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_evolving_schema_addition: { run: 1, as: p }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 100 }
+  - editPipelineText: { connector: Regression, pipeline: $p.pipeline, field: Run, value: 2 }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 100 }
+  - editPipelineText: { connector: Regression, pipeline: $p.pipeline, field: Run, value: 3 }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 100 }

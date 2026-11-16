@@ -63,3 +63,13 @@ export async function latestRun(page: Page) {
     dataMoved: col('Data Moved'),
   };
 }
+
+// "View Logs" on a run opens an "ETL Run Logs" popup: a log viewer with its own Search box and "N matches".
+// The viewer only renders visible lines, so search it (like a user would) instead of reading its text.
+export const runLogs = (page: Page) => ({
+  openLatest: () => runsTable(page).getByRole('row').nth(1).getByRole('button', { name: 'View Logs' }),
+  title: page.getByText('ETL Run Logs:', { exact: true }),
+  search: page.getByRole('textbox', { name: 'Search', exact: true }),
+  matches: page.getByText(/^\d+ match(es)?$/),
+  close: page.getByTestId('CloseIcon'),
+});

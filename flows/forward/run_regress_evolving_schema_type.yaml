@@ -1,6 +1,6 @@
 # Known answer: Regression → Evolving Schema Type. Run 1 loads 100 rows. Setting Run=3 sends text into the
 # integer column _integer, which the warehouse rejects: the next run must end in ERROR (schema drift), 0 rows moved.
-description: Create an Evolving Schema Type pipeline, run it (SUCCESS, 100 rows), set Run=3, run again and expect ERROR with 0 rows
+description: Create an Evolving Schema Type pipeline, run it (SUCCESS, 100 rows), set Run=3, run again and expect ERROR, 0 rows, SCHEMA_DRIFT in its logs
 outputs:
   pipeline: $p.pipeline
 steps:
@@ -12,3 +12,4 @@ steps:
   - runPipeline: { connector: Regression, pipeline: $p.pipeline }
   - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: ERROR }
   - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: "-" }   # the runs tab shows "-" for 0 rows (as on develop)
+  - expectRunLog: { connector: Regression, pipeline: $p.pipeline, text: SCHEMA_DRIFT }   # what QA sees in View Logs

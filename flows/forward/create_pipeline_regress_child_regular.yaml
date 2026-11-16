@@ -1,0 +1,11 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# No fields to pick; Insert Mode starts empty, so it must be chosen.
+description: Create a manual-run Regular pipeline on Regression Child Connector. Does not run it.
+params:
+  insertMode: Append   # Append | Replace | Upsert
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression Child Connector, type: Regular }
+  - selectOption: { field: Insert Mode, option: $insertMode }
+  - savePipeline: { connector: Regression Child Connector, as: p }

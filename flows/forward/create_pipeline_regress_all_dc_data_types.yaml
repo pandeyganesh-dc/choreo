@@ -1,0 +1,11 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# Fields: one per DC data type (_text, _timestamp, ... _string).
+description: Create a manual-run All DC Data Types pipeline on Regression. Does not run it.
+params:
+  fields: all          # "all", or names as shown in the picker
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression, type: All DC Data Types }
+  - selectFields: { fields: $fields }
+  - savePipeline: { connector: Regression, as: p }

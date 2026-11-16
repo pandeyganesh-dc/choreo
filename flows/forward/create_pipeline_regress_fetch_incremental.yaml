@@ -1,0 +1,11 @@
+# One flow per connector + report: create_pipeline_<connector>_<report>.
+# Fetch Mode is preset to INCREMENTAL by the report (incremental key entity_id).
+description: "Create a manual-run Fetch: Incremental pipeline on Regression. Does not run it."
+params:
+  fields: all          # "all", or names as shown in the picker
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression, type: "Fetch: Incremental" }
+  - selectFields: { fields: $fields }
+  - savePipeline: { connector: Regression, as: p }

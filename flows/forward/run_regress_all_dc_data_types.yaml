@@ -1,0 +1,9 @@
+# Known answer: All DC Data Types loads exactly 1 row (one value of each DC data type).
+description: Create and run an All DC Data Types pipeline on Regression, expect SUCCESS with 1 row
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_all_dc_data_types: { as: p }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 1 }
