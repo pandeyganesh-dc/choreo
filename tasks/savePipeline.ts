@@ -4,10 +4,10 @@ import { defineTask } from '../core/task';
 import { stamp } from '../config';
 import { pipelineNew } from '../pages/pipelineNew';
 import { lastRunStatus } from '../pages/pipeline';
-import { goTo } from '../pages/screens';
+import { whereAmI, describe } from '../pages/screens';
 
 export default defineTask({
-  description: 'From the filled Report Details step: Next → Manual Run Only → dataset name → Submit (without running), then check it is listed and never ran. Returns { name }.',
+  description: 'From the filled Report Details step: Next → Manual Run Only → dataset name → Submit (without running), then View Run Status: check it opens and never ran. Returns { name }.',
   inputs: {
     connector: { required: true, description: 'Connector the wizard belongs to, e.g. Regression' },
     name: { description: 'Dataset name (default choreo_pipeline_<timestamp>)' },
@@ -27,8 +27,11 @@ export default defineTask({
     await w.submitBtn.click();
     await expect(w.added).toBeVisible();
 
-    // Confirm on screen: it is listed under the connector and has never run
-    await goTo(page, { screen: 'pipeline', connector, pipeline: name });
+    // Confirm on screen, using the app's own next step: "View Run Status" opens the new pipeline, never run
+    await w.viewRunStatus.click();
+    await expect
+      .poll(async () => describe(await whereAmI(page)), { timeout: 30_000 })
+      .toBe(describe({ screen: 'pipeline', connector, pipeline: name, tab: 'Number Of Runs' }));
     expect(await lastRunStatus(page)).toBe('No Run Initiated');
     return { connector, name };
   },

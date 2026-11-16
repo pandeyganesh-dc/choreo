@@ -26,6 +26,13 @@ later orchestration etc.
   A new destination usually needs no new code: list its dropdowns as selectOption steps.
 Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_reverse_source` in Local Postgres).
 
+## Run logs (for Claude)
+Every run writes `logs/<time>_<flow>/run.log` (git-ignored; path printed at the start of a run): params, each step's
+inputs/result/duration, every goTo (what the screen showed, the plan, each move and where it landed), run-status polls,
+HTTP errors (4xx/5xx), browser errors and dialogs. On failure it adds `failure.png` and `failure-page.yaml` (the page as
+an aria snapshot). Old runs are pruned at the start of each run: older than 1 day, or beyond the newest 20.
+When a flow fails or behaves oddly, read the run.log first. Log from tasks with `log()` from `core/log.ts`.
+
 ## Task rules
 - Atomic: one operation on ONE thing (deletePipeline, not "delete all"). Repetition belongs in flows (`forEach`).
 - Anything that would repeat inside tasks becomes its own task (per Ganesh).
@@ -86,7 +93,10 @@ Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_rever
   that row's Status, then checks the header agrees. The list is loaded when its spinners are gone; before that its pager
   says "0 records" even when there are runs. With no runs the list has no columns.
 - Breadcrumbs (`nav[aria-label=breadcrumb]`): connector page "Connectors / <connector>", pipeline page
-  "Connectors / <connector> / Edit Data Pipeline" + heading "(<pipeline>)", destination "Destinations / <destination>".
+  "Connectors / <connector> / Edit Data Pipeline", destination "Destinations / <destination>". A pipeline's name is read
+  from its header "<name> (Last Run - X)": the "(<name>)" heading above it only shows when opened from the list.
+- After creating a pipeline the wizard shows "Congratulations!" with next steps (text, no button role): "View Run Status"
+  opens the new pipeline on Number Of Runs. savePipeline uses it, so the next run/check needs no navigation.
   The "/" separators are `li aria-hidden`.
 - Create-pipeline wizard: the "Add All" fields button is named `move all right` (its aria-label). "Run after save" is ticked by default.
   Only step 2 ("Report Details") differs per report. Its Fields picker has two lists (available, selected); clicking an

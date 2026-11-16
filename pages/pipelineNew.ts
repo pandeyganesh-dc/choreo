@@ -36,4 +36,7 @@ export const pipelineNew = (page: Page) => ({
   runAfterSave: page.getByRole('checkbox', { name: 'Run after save' }),
   submitBtn: page.getByRole('button', { name: 'Submit', exact: true }),
   added: page.getByRole('alert').filter({ hasText: 'Configured Data Pipeline added successfully' }),
+  // After Submit: "Congratulations!" with next steps (text only, no button role). "View Run Status" opens the new
+  // pipeline on its Number Of Runs tab.
+  viewRunStatus: page.getByText('View Run Status', { exact: true }),
 });

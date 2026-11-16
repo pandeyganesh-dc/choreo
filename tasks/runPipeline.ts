@@ -3,6 +3,7 @@
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
 import { pipeline, latestRun } from '../pages/pipeline';
+import { log } from '../core/log';
 
 export default defineTask({
   description: 'Click "Run Pipeline", then wait until the new run is listed under Number Of Runs. Does not wait for it to finish.',
@@ -15,6 +16,7 @@ export default defineTask({
   async run(page, { connector, pipeline: name }) {
     const p = pipeline(page);
     const before = (await latestRun(page))?.id;
+    log(`  latest run before clicking Run: ${before ?? 'none'}`);
     await p.runBtn.click();
     // The app confirms the run was started (not finished)
     await expect(p.runStarted).toBeVisible();
@@ -26,6 +28,7 @@ export default defineTask({
         async () => {
           await p.refreshBtn.click();
           now = await latestRun(page);
+          log(`  refresh: latest run ${now ? `${now.id} ${now.status}` : 'none'}`);
           return now !== undefined && now.id !== before;
         },
         { timeout: 60_000, intervals: [1_000, 2_000], message: `The new run of "${name}" never appeared under Number Of Runs` },

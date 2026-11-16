@@ -2,6 +2,7 @@
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
 import { pipeline as pipelinePage, latestRun } from '../pages/pipeline';
+import { log } from '../core/log';
 
 // Statuses that mean "not finished yet"
 const IN_PROGRESS = ['QUEUED', 'RUNNING'];
@@ -26,6 +27,7 @@ export default defineTask({
           const run = await latestRun(page);
           if (!run) throw new Error(`"${pipeline}" has never run`);
           current = run.status;
+          log(`  refresh: latest run ${run.id} ${run.status} rows=${run.rowsMoved} data=${run.dataMoved}`);
           return IN_PROGRESS.includes(current.toUpperCase());
         },
         { timeout: Number(minutes) * 60_000, intervals: [2_000, 5_000], message: `"${pipeline}" run did not finish in ${minutes} min` },
@@ -33,6 +35,7 @@ export default defineTask({
       .toBe(false);
     expect(current, `"${pipeline}" latest run`).toBe(status);
 
+    log(`  header now: ${await p.lastRun.innerText().catch(() => '(not shown)')}`);
     // The header "(Last Run - X)" updates on its own a little later: it must agree
     await expect(p.lastRun, `"${pipeline}" header`).toHaveText(`(Last Run - ${status})`, { timeout: 30_000 });
     return { connector, pipeline, status: current };

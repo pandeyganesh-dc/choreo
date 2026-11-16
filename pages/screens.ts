@@ -6,9 +6,11 @@
 // Never trust memory for "where am I": always read the screen (breadcrumb, headings, selected tab).
 import { Page, expect } from '@playwright/test';
 import { readySidebar } from './sidebar';
+import { log as fileLog } from '../core/log';
 
 export type Screen =
   | 'unknown'
+  | 'home' // after login: "Welcome to DataChannel"
   | 'connectors' // ETL → All Connectors
   | 'connector' // one connector's page (tabs: SetUp, Configured Data Pipelines, ...)
   | 'pipeline' // one configured pipeline's page (tabs: SetUp, Number Of Runs, ...)
@@ -27,6 +29,7 @@ export type Spot = {
   // Target only: arrive by loading the screen anew (via the sidebar), even if already there. For screens that
   // show stale data until you navigate away (e.g. a connector's pipeline count after deletes).
   fresh?: boolean;
+  seen?: string; // read only: what an unrecognised screen showed
 };
 
 type Move = { label: string; to: Spot; go: (page: Page) => Promise<void> };
@@ -50,12 +53,22 @@ const bracketTitle = async (page: Page) => {
   return undefined;
 };
 
+// A pipeline page's header holds its name and the "Run Pipeline" button. Its status text varies
+// ("(Last Run - SUCCESS)", or just "RUNNING" while a run is going), and the "(<name>)" heading above it only shows
+// when opened from the list, so neither is used to find the name.
+const pipelineName = async (page: Page) => {
+  const header = page.getByRole('heading', { level: 3 }).filter({ has: page.getByRole('button', { name: 'Run Pipeline', exact: true }) });
+  if (!(await header.count())) return undefined;
+  const first = header.first().getByRole('paragraph').first();
+  return (await first.count()) ? (await first.innerText()).trim() : undefined;
+};
+
 // Where am I? Only from what's on screen. Doesn't wait: if a screen is still loading it may say 'unknown',
 // which only makes the path longer (start from the sidebar), never wrong.
 export async function whereAmI(page: Page): Promise<Spot> {
   const c = await crumbs(page);
   if (c[0] === 'Connectors' && c.length === 3 && c[2] === 'Edit Data Pipeline') {
-    const pipeline = await bracketTitle(page);
+    const pipeline = await pipelineName(page);
     if (pipeline) return { screen: 'pipeline', connector: c[1], pipeline, tab: await selectedTab(page) };
   }
   if (c[0] === 'Connectors' && c.length === 2) return { screen: 'connector', connector: c[1], tab: await selectedTab(page) };
@@ -64,6 +77,7 @@ export async function whereAmI(page: Page): Promise<Spot> {
     if (sync) return { screen: 'sync', destination: c[1], sync, tab: await selectedTab(page) };
   }
   if (c[0] === 'Destinations' && c.length === 2) return { screen: 'destination', destination: c[1], tab: await selectedTab(page) };
+  if (await page.getByText('Welcome to DataChannel, Let’s get started!', { exact: true }).isVisible()) return { screen: 'home' };
   if (await page.getByRole('tabpanel', { name: 'Explore Connectors' }).locator('.Connector-title1').first().isVisible())
     return { screen: 'connectors' };
   if (await page.getByRole('tabpanel', { name: 'Explore Destinations' }).locator('.Connector-title1').first().isVisible())
@@ -77,11 +91,11 @@ export async function whereAmI(page: Page): Promise<Spot> {
 }
 
 export const describe = (s: Spot) =>
-  [s.screen, s.connector ?? s.destination, s.pipeline ?? s.sync, s.tab && `[${s.tab}]`].filter(Boolean).join(' ');
+  [s.screen, s.seen && `(${s.seen})`, s.connector ?? s.destination, s.pipeline ?? s.sync, s.tab && `[${s.tab}]`].filter(Boolean).join(' ');
 
 // Does `here` satisfy `target`? Every field the target names must match; fields it leaves out don't matter.
 const matches = (here: Spot, target: Spot) =>
-  (Object.keys(target) as (keyof Spot)[]).every(k => k === 'fresh' || target[k] === undefined || here[k] === target[k]);
+  (Object.keys(target) as (keyof Spot)[]).every(k => k === 'fresh' || k === 'seen' || target[k] === undefined || here[k] === target[k]);
 const key = (s: Spot) => JSON.stringify([s.screen, s.connector, s.pipeline, s.destination, s.sync, s.tab]);
 
 // ---------- moves (one user action each) ----------
@@ -240,20 +254,46 @@ async function arrive(page: Page, want: Spot, timeout = 60_000) {
   return now;
 }
 
+// What an unrecognised screen showed, for the log: why whereAmI couldn't place it
+async function seen(page: Page) {
+  const c = await crumbs(page);
+  const headers = (await page.getByRole('heading', { level: 3 }).allInnerTexts()).map(t => t.trim().replace(/\s+/g, ' ').slice(0, 80));
+  return `breadcrumb [${c.join(' / ')}], level-3 headings [${headers.join(' | ')}], spinners ${await page.getByRole('progressbar').count()}`;
+}
+
+// Where am I, plus, when the screen isn't in the map, what it showed (for the log)
+async function locate(page: Page) {
+  const here = await whereAmI(page);
+  if (here.screen === 'unknown') here.seen = await seen(page);
+  return here;
+}
+
 // Go to `target` by the fewest user moves from wherever the screen is now. Logs each move.
 // If the first read of the screen was wrong (it was still loading), it re-reads and re-plans once.
-export async function goTo(page: Page, target: Spot, log: (line: string) => void = console.log) {
+export async function goTo(page: Page, target: Spot, show: (line: string) => void = console.log) {
+  // Shown in the terminal and kept in the run log
+  const log = (line: string) => {
+    show(line);
+    fileLog(`  goTo${line}`);
+  };
+  fileLog(`  goTo target ${describe(target)}`);
   for (let attempt = 1; ; attempt++) {
-    const here = await whereAmI(page);
-    if (matches(here, target) && !target.fresh) return here;
+    const here = await locate(page);
+    fileLog(`  goTo read screen: ${describe(here)}`);
+    if (matches(here, target) && !target.fresh) {
+      fileLog('  goTo already there: no moves');
+      return here;
+    }
     // Fresh: plan as if lost, so the path starts at the sidebar and the screen loads anew
     const path = plan(target.fresh && attempt === 1 ? { screen: 'unknown' } : here, target);
     if (!path) throw new Error(`No way known from ${describe(here)} to ${describe(target)}`);
     log(` ↳ at ${describe(here)} → ${describe(target)}: ${path.map(p => p.label).join(', ')}`);
     try {
       for (const mv of path) {
+        const t0 = Date.now();
         await mv.go(page);
-        await arrive(page, mv.to);
+        const now = await arrive(page, mv.to);
+        fileLog(`  goTo move "${mv.label}" landed on ${describe(now)} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
       }
       return await whereAmI(page);
     } catch (e) {
