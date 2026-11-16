@@ -4,6 +4,7 @@
 import { test, Page } from '@playwright/test';
 import { loadTasks, loadFlows, checkFlow, isForEach, isRequired, Step, Flow } from './load';
 import { ensureLoggedIn } from './login';
+import { goTo } from '../pages/screens';
 
 const lib = { tasks: loadTasks(), flows: loadFlows() };
 const only = process.env.FLOW;
@@ -61,7 +62,10 @@ async function runSteps(page: Page, steps: Step[], vars: Record<string, any>, pr
       const full: Record<string, any> = {};
       for (const [k, spec] of Object.entries(task.inputs)) if (spec.default !== undefined) full[k] = spec.default;
       Object.assign(full, input);
-      result = await test.step(`${at}. ${s.call}${show(full)}`, () => task.run(page, full));
+      result = await test.step(`${at}. ${s.call}${show(full)}`, async () => {
+        if (task.screen) await goTo(page, task.screen(full), line => console.log(`${at}. ${s.call}${line}`));
+        return task.run(page, full);
+      });
     }
     if (s.as) vars[s.as] = result ?? {};
   }

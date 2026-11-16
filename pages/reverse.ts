@@ -1,19 +1,7 @@
 // Reverse ETL: destinations (e.g. "GoogleSheets Export") and the "Create Data Sync" wizard.
 // Wizard steps: 1 Credentials → 2 Syncs (type, e.g. "Export") → 3 Sync Details (differs per destination + sync)
 //               → 4 Scheduling → 5 Sync Name.
-import { Page, expect } from '@playwright/test';
-import { readySidebar } from './sidebar';
-
-// Reverse ETL → All Destinations
-const allDestinations = (page: Page) => {
-  const panel = page.getByRole('tabpanel', { name: 'Explore Destinations' });
-  return {
-    search: panel.getByRole('textbox', { name: 'search' }),
-    card: (name: string) => panel.getByText(name, { exact: true }),
-    // Every card's name (the app's own class for it; there's no role or label to use)
-    cardNames: panel.locator('.Connector-title1'),
-  };
-};
+import { Page } from '@playwright/test';
 
 // A destination's own page, and the sync wizard opened from it
 export const destination = (page: Page) => ({
@@ -50,22 +38,3 @@ export const destination = (page: Page) => ({
 
 export const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Goes to a destination's page the way a user does: sidebar Reverse ETL → All Destinations → search → its card.
-// The search filters in the browser, so results are final as soon as the name is typed: check once, no waiting.
-export async function goToDestination(page: Page, name: string) {
-  const s = await readySidebar(page);
-  const a = allDestinations(page);
-  await s.reverseEtl.click();
-  await s.allDestinations.click();
-  await expect(a.cardNames.first()).toBeVisible(); // page loaded: the full list is shown before typing
-  await a.search.fill(name);
-  const shown = (await a.cardNames.allInnerTexts()).map(t => t.trim());
-  if (!shown.includes(name)) {
-    throw new Error(
-      `No destination named "${name}" under Reverse ETL → All Destinations (names are case-sensitive). ` +
-        (shown.length ? `Search shows: ${shown.join(', ')}` : 'Search found nothing.'),
-    );
-  }
-  await a.card(name).click();
-  await expect(destination(page).title(name)).toBeVisible();
-}

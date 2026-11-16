@@ -1,0 +1,9 @@
+# Known answer: Regression → Regular loads exactly 1 row (one "foo" value).
+description: Create and run a Regular pipeline on Regression, expect SUCCESS with 1 row moved and some data moved
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_regular: { as: p }
+  - runPipeline: { connector: Regression, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Regression, pipeline: $p.pipeline, rows: 1 }

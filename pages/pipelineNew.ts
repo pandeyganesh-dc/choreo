@@ -1,5 +1,5 @@
 // Selectors for the "Create Data Pipeline" wizard (connector page → + Data Pipelines)
-// Steps: 1 pick a pipeline type → 2 report details (fields) → 3 scheduling → 4 dataset name.
+// Steps: 1 pick a pipeline type → 2 report details (fields and/or parameters) → 3 scheduling → 4 dataset name.
 import { Page } from '@playwright/test';
 
 // Step 2's Fields picker: the innermost block holding both lists and the Add All button
@@ -18,12 +18,14 @@ export const pipelineNew = (page: Page) => ({
   // Step 1 has a Next button above and below the cards; later steps have one
   nextBtn: page.getByRole('button', { name: 'Next', exact: true }).first(),
 
-  // Step 2 "Report Details": the part that differs per report. Every report has a Fields picker:
+  // Step 2 "Report Details": the part that differs per report. Most reports have a Fields picker:
   // two lists, available (left) and selected (right). Clicking an available field moves it right.
-  // The "Add All" button's accessible name is its aria-label.
+  // The "Add All" button's accessible name is its aria-label. Others have only parameters (dropdowns, text boxes).
+  reportDetailsHeading: page.getByRole('heading', { name: 'Enter Report Configuration', exact: true }),
   addAllFields: page.getByRole('button', { name: 'move all right' }),
   availableField: (name: string) => fieldList(page, 0).filter({ has: page.getByText(name, { exact: true }) }),
   selectedField: (name: string) => fieldList(page, 1).filter({ has: page.getByText(name, { exact: true }) }),
+  availableFields: fieldList(page, 0),
   selectedFields: fieldList(page, 1),
 
   // Step 3

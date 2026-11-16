@@ -1,19 +1,18 @@
-// List the pipeline names a user can SEE on the Configured Data Pipelines tab that's already open.
-// Doesn't navigate (that's goToConfiguredPipelines).
+// List the pipeline names a user can SEE on a connector's Configured Data Pipelines tab.
 // UI only: if the list has more pages, names on other pages are not returned (a user wouldn't see them either).
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
-import { datasource, configuredPipelineCount, expectOnConfiguredPipelines } from '../pages/datasource';
+import { datasource, configuredPipelineCount } from '../pages/datasource';
 
 export default defineTask({
   description:
-    "On the open Configured Data Pipelines tab, list the visible pipeline names (first page only). Returns { names, total }.",
+    "On a connector's Configured Data Pipelines tab, list the visible pipeline names (first page only). Returns { names, total }.",
   inputs: {
-    connector: { required: true, description: 'Connector whose tab must be open, e.g. Regression' },
+    connector: { required: true, description: 'Connector name as shown in the UI, e.g. Regression' },
   },
+  screen: i => ({ screen: 'connector', connector: i.connector, tab: 'Configured Data Pipelines' }),
   async run(page, { connector }) {
     const d = datasource(page);
-    await expectOnConfiguredPipelines(page, connector);
     // "N Configured Data Pipelines": the total, including any not on the visible page
     const total = await configuredPipelineCount(page);
     // With 0 pipelines the tab shows no table at all

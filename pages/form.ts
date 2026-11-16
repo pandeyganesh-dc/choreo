@@ -7,3 +7,6 @@ export const dropdown = (page: Page, label: string) => ({
   options: page.getByRole('option'),
   noOptions: page.getByText('No options', { exact: true }),
 });
+
+// A text box found by its label, e.g. "Run"
+export const textbox = (page: Page, label: string) => page.getByRole('textbox', { name: label, exact: true });

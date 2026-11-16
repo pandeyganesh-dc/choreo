@@ -1,6 +1,5 @@
-// Selectors for the Warehouses list (sidebar → Warehouses), and how a user gets there.
-import { Page, expect } from '@playwright/test';
-import { readySidebar } from './sidebar';
+// Selectors for the Warehouses list (sidebar → Warehouses), Getting there is pages/screens.ts (goTo).
+import { Page } from '@playwright/test';
 
 export const warehouses = (page: Page) => ({
   search: page.getByRole('textbox', { name: 'Search warehouses...' }),
@@ -8,7 +7,3 @@ export const warehouses = (page: Page) => ({
   item: (name: string) => page.getByText(name, { exact: true }),
 });
 
-export async function goToWarehouses(page: Page) {
-  await (await readySidebar(page)).warehouses.click();
-  await expect(warehouses(page).addNewBtn).toBeVisible();
-}

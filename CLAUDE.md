@@ -21,22 +21,28 @@ Flows that create something per report live in one folder per job type (per Gane
 later orchestration etc.
 - Forward: `flows/forward/create_pipeline_<connector>_<report>.yaml`. Fixes connector + report, takes the report's
   "Report Details" values as params, outputs `pipeline`. If step 2 has inputs beyond Fields, extend the wizard tasks.
-- Reverse: `flows/reverse/create_sync_<destination>_<sync>.yaml`. Built from generic steps: goToDestination → startSync
+- Reverse: `flows/reverse/create_sync_<destination>_<sync>.yaml`. Built from generic steps: startSync
   (credentials + sync type) → one `selectOption` per "Sync Details" dropdown → saveSync. Outputs `sync`.
   A new destination usually needs no new code: list its dropdowns as selectOption steps.
 Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_reverse_source` in Local Postgres).
 
 ## Task rules
 - Atomic: one operation on ONE thing (deletePipeline, not "delete all"). Repetition belongs in flows (`forEach`).
-- Anything that would repeat inside tasks becomes its own task (per Ganesh). Navigation is the main case: going to a
-  screen is one task (`goToConfiguredPipelines`), acting on it is another (`deletePipeline`, `listPipelines`), and a flow
-  joins them (`delete-pipeline`). Tasks that act on the current screen check they're on the right one
-  (`expectOnConfiguredPipelines`) and fail if not; they never navigate there themselves.
+- Anything that would repeat inside tasks becomes its own task (per Ganesh).
+- Navigation (per Ganesh, 2026-11-16): a task declares the screen it works on (`screen: i => ({ screen: 'pipeline',
+  connector, pipeline, tab: 'Number Of Runs' })`). Before running it, the runner calls `goTo` (`pages/screens.ts`), which
+  reads where the browser is from the screen (breadcrumb, headings, selected tab), finds the fewest user moves to the
+  target and checks each screen it lands on. Already there = no moves. Tasks never navigate in `run()` except to
+  confirm a result (e.g. savePipeline opens the new pipeline). Wizard-step tasks (selectFields, fillText, savePipeline…)
+  declare no screen. Each move is logged as `↳ at <here> → <target>: <moves>`.
+- The screen map is hand-written in `pages/screens.ts`: `whereAmI` (how to recognise each screen) and `movesFrom`
+  (what a user can click from it). Add a screen there when a task needs one. "Where am I" is always read from the
+  screen, never remembered. `fresh: true` in a target reloads it via the sidebar (for screens that show stale data).
 - UI only: a task knows only what a user can see on screen (no DB/API). listPipelines returns only the visible page.
   If a user couldn't figure something out from the UI, that's a product gap to fix, not something to work around.
 - Strict: do exactly what the name says, or throw a clear error. Never silently "fix" state.
   (e.g. linkConnector throws if the connector is already linked)
-- Navigate like a user: sidebar → lists → search → click (`goToConnector`, `goToWarehouses`). Never `page.goto` a URL
+- Navigate like a user: sidebar, lists, search, breadcrumbs, tabs (moves in `pages/screens.ts`). Never `page.goto` a URL
   (only login opens the app at `/`), never `page.reload`. Refresh only with the app's own buttons (e.g. runs tab "Refresh Page").
 - Confirm the result at the end from what's on screen (row gone, count changed, linked view shown), so a passing task means it really happened.
 - Connectors are named as the UI shows them (`Regression`, not the URL slug `regress`).
@@ -57,7 +63,7 @@ Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_rever
 - Opening an unlinked connector pops up a "Link a Data Warehouse to this Datasource" modal at once; the page behind it is
   aria-hidden, so role selectors only see the modal. Linking happens in that modal.
 - "Is this connector linked?": read "+ Data Pipelines" (enabled iff linked, from the first frame). The modal and the
-  unlink button only appear after loading; `goToConnector` does this and returns `linked`.
+  unlink button only appear after loading; `connectorLinked` waits for that and returns `linked`.
 - After a delete, the "N Configured Data Pipelines" header sometimes stays stale until you navigate away. Don't assert on it right after.
 - Any popup left open (e.g. the link modal after unlinking) hides the sidebar from roles; `readySidebar` presses Escape first.
 - ETL in the sidebar opens a flyout (My Connectors = linked ones only; All Connectors = every connector, with search).
@@ -69,6 +75,19 @@ Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_rever
 - MUI icons are aria-hidden but carry `data-testid="<IconName>"` (e.g. `DeleteOutlineOutlinedIcon`). Use `getByTestId` for icon-only buttons.
 - Pipeline delete uses a browser `confirm()`: register `page.once('dialog', d => d.accept())` before clicking.
 - With 0 pipelines the Configured Data Pipelines tab renders no table and no search box. Read the "N Configured Data Pipelines" header first.
+- Create-pipeline wizard is split like the reverse one: startPipeline (type) → Report Details steps
+  (selectFields / selectOption / fillText) → savePipeline. Some reports have no Fields picker, only parameters
+  (Regression → Evolving Schema Type: "Insert Mode" dropdown, "Run" text box).
+- A saved pipeline's SetUp tab shows settings read-only. Each has a pencil icon (tooltip "Edit Field"); editing shows
+  ✓ (`CheckIcon`, saves) and ✗ (`ClearIcon`). Save toast: "Report edited successfully."
+- The Number Of Runs table has no error message column. Rows/Data Moved show "-" for 0 (as on develop).
+- Number Of Runs: right after a run starts, the header "(Last Run - X)" still shows the previous run for a while
+  (it updates on its own). Track a run by the list instead: runPipeline waits for a new top row, expectRunStatus reads
+  that row's Status, then checks the header agrees. The list is loaded when its spinners are gone; before that its pager
+  says "0 records" even when there are runs. With no runs the list has no columns.
+- Breadcrumbs (`nav[aria-label=breadcrumb]`): connector page "Connectors / <connector>", pipeline page
+  "Connectors / <connector> / Edit Data Pipeline" + heading "(<pipeline>)", destination "Destinations / <destination>".
+  The "/" separators are `li aria-hidden`.
 - Create-pipeline wizard: the "Add All" fields button is named `move all right` (its aria-label). "Run after save" is ticked by default.
   Only step 2 ("Report Details") differs per report. Its Fields picker has two lists (available, selected); clicking an
   available field moves it over. Each list also has an empty `<li>`, so count only items with a heading.

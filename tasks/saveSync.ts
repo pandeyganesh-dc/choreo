@@ -2,7 +2,8 @@
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
 import { stamp } from '../config';
-import { destination as dest, goToDestination } from '../pages/reverse';
+import { destination as dest } from '../pages/reverse';
+import { goTo } from '../pages/screens';
 
 export default defineTask({
   description: 'From the filled Sync Details step: Next → Manual Run Only → name → Submit (without running), then check it is listed. Returns { name }.',
@@ -26,11 +27,8 @@ export default defineTask({
 
     await expect(d.added).toBeVisible();
 
-    // Confirm on screen: it's listed under the destination's Configured Syncs
-    await goToDestination(page, destination);
-    await d.configuredTab.click();
-    await d.syncSearch.fill(name);
-    await expect(d.syncLink(name)).toBeVisible();
+    // Confirm on screen: it's listed under the destination's Configured Syncs, and opens
+    await goTo(page, { screen: 'sync', destination, sync: name });
     return { destination, name };
   },
 });

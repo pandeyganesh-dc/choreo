@@ -1,7 +1,6 @@
-description: Go to a destination and run one of its configured syncs (does not wait for it to finish)
+description: Run one configured sync of a destination (does not wait for it to finish)
 params:
   destination:         # required: e.g. "GoogleSheets Export"
   sync:                # required: sync name
 steps:
-  - goToDestination: { destination: $destination }
   - runSync: { destination: $destination, sync: $sync }

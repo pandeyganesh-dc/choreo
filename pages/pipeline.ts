@@ -1,6 +1,5 @@
-// Selectors for one configured pipeline's page (connector → Configured Data Pipelines → click its name)
+// Selectors for one configured pipeline's page. Getting there is pages/screens.ts (goTo).
 import { Page, expect } from '@playwright/test';
-import { datasource, configuredPipelineCount, goToConnector } from './datasource';
 
 export const pipeline = (page: Page) => ({
   title: (name: string) => page.getByRole('heading', { name: `(${name})`, exact: true }),
@@ -11,6 +10,19 @@ export const pipeline = (page: Page) => ({
   // "Number Of Runs" tab has the app's own refresh button (no browser reload needed)
   runsTab: page.getByRole('tab', { name: 'Number Of Runs' }),
   refreshBtn: page.getByRole('button', { name: 'Refresh Page' }),
+  // SetUp tab: saved settings are read-only until you click the field's pencil icon ("Edit Field" tooltip).
+  // Editing shows a ✓ (CheckIcon, saves) and ✗ (ClearIcon) above the box.
+  setupTab: page.getByRole('tab', { name: 'SetUp', exact: true }),
+  textField: (label: string) => page.getByRole('textbox', { name: label, exact: true }),
+  // One field's block: its heading ("Run*- tooltip") plus its box
+  fieldBlock: (label: string) =>
+    page.locator('div')
+      .filter({ has: page.getByRole('heading', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\*?-`) }) })
+      .filter({ has: page.getByRole('textbox', { name: label, exact: true }) })
+      .last(),
+  editFieldIcon: page.getByLabel('Edit Field'),
+  saveFieldIcon: page.getByTestId('CheckIcon'),
+  edited: page.getByRole('alert').filter({ hasText: 'Report edited successfully.' }),
 });
 
 // Reads the status from "(Last Run - X)", e.g. "SUCCESS".
@@ -19,20 +31,35 @@ export async function lastRunStatus(page: Page) {
   return text.replace(/^\(Last Run - /, '').replace(/\)$/, '').trim();
 }
 
-// Opens a pipeline the way a user would: connector → Configured Data Pipelines → search → click it.
-export async function openPipeline(page: Page, connector: string, name: string) {
-  const d = datasource(page);
-  const missing = () => new Error(`"${connector}" has no pipeline named "${name}"`);
-  await goToConnector(page, connector);
-  await expect(d.configuredCount).toBeVisible();
-  // With 0 pipelines the tab shows no table (and no search box) at all
-  if ((await configuredPipelineCount(page)) === 0) throw missing();
-  await d.configuredTab.click();
-  await d.pipelineSearch.fill(name);
-  const link = d.pipelineRow(name).getByRole('link', { name, exact: true });
-  await link.waitFor({ timeout: 15_000 }).catch(() => {
-    throw missing();
-  });
-  await link.click();
-  await expect(pipeline(page).title(name)).toBeVisible();
+// "Number Of Runs" tab: the runs list (the tab also draws its graph as a table; the list is the one with "Rows Moved")
+export const runsTable = (page: Page) => page.getByRole('tabpanel').getByRole('table').filter({ hasText: 'Rows Moved' });
+
+// The latest run's row, read like a person reads the table: columns found by their headers.
+// Returns undefined when the table shows no runs.
+export async function latestRun(page: Page) {
+  const table = runsTable(page);
+  // The pager says how many runs there are ("Showing 0-1 of 1 records"). With none, the list has no columns at all.
+  // Loaded when its spinners are gone (before that the pager says 0 even when there are runs)
+  await expect(page.getByRole('tabpanel').getByRole('progressbar')).toHaveCount(0, { timeout: 30_000 });
+  const pager = page.getByRole('tabpanel').getByText(/^Showing .* of \d+ records$/);
+  await pager.waitFor();
+  const total = Number((await pager.innerText()).match(/of (\d+) records/)![1]);
+  if (total === 0) return undefined;
+  await table.waitFor();
+  const headers = (await table.getByRole('columnheader').allInnerTexts()).map(h => h.trim());
+  const rows = table.getByRole('row');
+  if ((await rows.count()) < 2) return undefined;
+  const cells = (await rows.nth(1).getByRole('cell').allInnerTexts()).map(c => c.trim());
+  const col = (name: string) => {
+    const i = headers.indexOf(name);
+    if (i < 0) throw new Error(`Runs table has no "${name}" column: ${headers.join(', ')}`);
+    return cells[i];
+  };
+  return {
+    // Start Time identifies a run on screen
+    id: `${col('Start Time')} ${col('Run Type')}`,
+    status: col('Status'),
+    rowsMoved: col('Rows Moved'),
+    dataMoved: col('Data Moved'),
+  };
 }

@@ -1,0 +1,13 @@
+# Regression → Evolving Schema Type has no fields, only parameters. "Run" simulates which run this is:
+# 1 = 100 rows, all data types; 2 = one _string value becomes a number; 3 = also one _integer value becomes text.
+description: Create a manual-run Evolving Schema Type pipeline on Regression. Does not run it.
+params:
+  run: 1               # which run to simulate: 1, 2 or 3
+  insertMode: Append   # Append | Replace | Upsert
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Regression, type: Evolving Schema Type }
+  - selectOption: { field: Insert Mode, option: $insertMode }
+  - fillText: { field: Run, value: $run }
+  - savePipeline: { connector: Regression, as: p }

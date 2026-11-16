@@ -12,7 +12,6 @@ params:
 outputs:
   sync: $saved.name
 steps:
-  - goToDestination: { destination: GoogleSheets Export }
   - startSync: { destination: GoogleSheets Export, credential: $credential, sync: Export }
   - selectOption: { field: Sheet, option: $sheet }
   - selectOption: { field: Worksheet Name, option: $worksheet }

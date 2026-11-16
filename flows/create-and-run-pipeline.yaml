@@ -1,9 +1,11 @@
-description: Create a pipeline on a linked connector and start a run (does not wait for it to finish)
+description: Create a pipeline (all fields) on a linked connector and start a run (does not wait for it to finish)
 params:
   connector:           # required: which connector
   type: Regular
 outputs:
   pipeline: $p.name
 steps:
-  - createPipeline: { connector: $connector, type: $type, as: p }
+  - startPipeline: { connector: $connector, type: $type }
+  - selectFields: { fields: all }
+  - savePipeline: { connector: $connector, as: p }
   - runPipeline: { connector: $connector, pipeline: $p.name }

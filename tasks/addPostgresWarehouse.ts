@@ -2,7 +2,8 @@
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
 import { warehouseAdd } from '../pages/warehouseAdd';
-import { warehouses, goToWarehouses } from '../pages/warehouses';
+import { warehouses } from '../pages/warehouses';
+import { goTo } from '../pages/screens';
 import { config, stamp } from '../config';
 
 export default defineTask({
@@ -16,11 +17,11 @@ export default defineTask({
     username: { default: config.postgres.username },
     password: { default: config.postgres.password },
   },
+  screen: () => ({ screen: 'warehouses' }),
   async run(page, i) {
     const name = i.name ?? `choreo_pg_${stamp()}`;
     const w = warehouseAdd(page);
 
-    await goToWarehouses(page);
     await warehouses(page).addNewBtn.click();
     await w.card('PostgreSQL').click();
     await w.addDetailsBtn.click();
@@ -39,7 +40,7 @@ export default defineTask({
     await w.saveBtn.click();
 
     // Confirm it's really saved: it's listed under Warehouses
-    await goToWarehouses(page);
+    await goTo(page, { screen: 'warehouses' });
     await warehouses(page).search.fill(name);
     await expect(warehouses(page).item(name)).toBeVisible();
     return { name };

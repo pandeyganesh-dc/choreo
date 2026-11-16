@@ -7,4 +7,6 @@ params:
 outputs:
   pipeline: $p.name
 steps:
-  - createPipeline: { connector: Regression, type: Regular, fields: $fields, as: p }
+  - startPipeline: { connector: Regression, type: Regular }
+  - selectFields: { fields: $fields }
+  - savePipeline: { connector: Regression, as: p }

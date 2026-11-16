@@ -1,7 +1,7 @@
 // Link a connector to a warehouse. Strict: fails if the connector is already linked.
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
-import { datasource, goToConnector } from '../pages/datasource';
+import { datasource, connectorLinked } from '../pages/datasource';
 
 export default defineTask({
   description: 'Link a connector to a warehouse. Fails if the connector is already linked.',
@@ -9,9 +9,10 @@ export default defineTask({
     connector: { required: true, description: 'Connector name as shown in the UI, e.g. Regression' },
     warehouse: { required: true, description: 'Warehouse name as shown in the dropdown' },
   },
+  screen: i => ({ screen: 'connector', connector: i.connector }),
   async run(page, { connector, warehouse }) {
     const d = datasource(page);
-    if (await goToConnector(page, connector)) {
+    if (await connectorLinked(page, connector)) {
       const current = await d.linkedWarehouse.inputValue().catch(() => '?');
       throw new Error(`"${connector}" is already linked to "${current}". Unlink it first.`);
     }

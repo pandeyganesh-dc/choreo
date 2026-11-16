@@ -5,17 +5,15 @@ import { defineTask } from '../core/task';
 import { destination as dest } from '../pages/reverse';
 
 export default defineTask({
-  description: 'On the open destination page: + Data Sync → pick credentials → pick sync type → stop at Sync Details.',
+  description: "On a destination's page: + Data Sync → pick credentials → pick sync type → stop at Sync Details.",
   inputs: {
-    destination: { required: true, description: 'Destination whose page must be open, e.g. GoogleSheets Export' },
+    destination: { required: true, description: 'Destination name as shown in the UI, e.g. GoogleSheets Export' },
     credential: { required: true, description: 'Credential name as shown on its card, e.g. test-choreo' },
     sync: { required: true, description: 'Sync type, as titled on its card in step 2, e.g. Export' },
   },
+  screen: i => ({ screen: 'destination', destination: i.destination }),
   async run(page, { destination, credential, sync }) {
     const d = dest(page);
-    if (!(await d.title(destination).isVisible())) {
-      throw new Error(`Not on the "${destination}" destination page. Run goToDestination first.`);
-    }
     await d.addSyncBtn.click();
 
     // Step 1: credentials

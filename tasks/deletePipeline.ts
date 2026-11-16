@@ -1,19 +1,19 @@
-// Delete one pipeline on the Configured Data Pipelines tab that's already open. Doesn't navigate
-// (that's goToConfiguredPipelines), so a flow can delete many without going back and forth.
+// Delete one pipeline from its connector's Configured Data Pipelines tab. When deleting many, the runner
+// stays on that tab between them (shortest path = no moves).
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
-import { datasource, expectOnConfiguredPipelines } from '../pages/datasource';
+import { datasource } from '../pages/datasource';
 
 export default defineTask({
-  description: 'On the open Configured Data Pipelines tab, delete one pipeline by name. Fails if it is not there.',
+  description: "On a connector's Configured Data Pipelines tab, delete one pipeline by name. Fails if it is not there.",
   inputs: {
-    connector: { required: true, description: 'Connector whose tab must be open, e.g. Regression' },
+    connector: { required: true, description: 'Connector name as shown in the UI, e.g. Regression' },
     pipeline: { required: true, description: 'Pipeline (dataset) name' },
   },
+  screen: i => ({ screen: 'connector', connector: i.connector, tab: 'Configured Data Pipelines' }),
   async run(page, { connector, pipeline }) {
     const d = datasource(page);
     const missing = () => new Error(`"${connector}" has no pipeline named "${pipeline}"`);
-    await expectOnConfiguredPipelines(page, connector);
 
     // With 0 pipelines the tab shows no table and no search box at all
     await d.pipelineSearch.fill(pipeline, { timeout: 10_000 }).catch(() => {
