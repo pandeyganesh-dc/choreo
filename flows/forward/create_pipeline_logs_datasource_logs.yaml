@@ -1,0 +1,13 @@
+# Logs → Datasource Logs: copies the account's own ETL run history (V2 logs/logs.py, which reads job_runs on I2991)
+# into the warehouse. No fields, only Fetch Mode and Insert Mode.
+description: Create a manual-run Datasource Logs pipeline on the Logs connector. Does not run it.
+params:
+  fetchMode: INCREMENTAL   # INCREMENTAL | FULL
+  insertMode: Upsert       # Upsert | Append | Replace
+outputs:
+  pipeline: $p.name
+steps:
+  - startPipeline: { connector: Logs, type: Datasource Logs }
+  - selectOption: { field: Fetch Mode, option: $fetchMode }
+  - selectOption: { field: Insert Mode, option: $insertMode }
+  - savePipeline: { connector: Logs, as: p }

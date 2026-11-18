@@ -1,0 +1,10 @@
+# Create and run a Datasource Logs pipeline. Rows depend on the account's run history, so the check is a lower
+# bound: there is always at least one ETL run to copy (this account has run pipelines), so at least 1 row.
+description: Create and run a Datasource Logs pipeline (Logs connector), expect SUCCESS and at least 1 row moved
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_logs_datasource_logs: { as: p }
+  - runPipeline: { connector: Logs, pipeline: $p.pipeline }
+  - expectRunStatus: { connector: Logs, pipeline: $p.pipeline, status: SUCCESS }
+  - expectLastRunMoved: { connector: Logs, pipeline: $p.pipeline, minRows: 1 }

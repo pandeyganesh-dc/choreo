@@ -12,20 +12,24 @@ const toNumber = (text: string, what: string) => {
 
 export default defineTask({
   description:
-    "On a pipeline's Number Of Runs tab, expect the latest run's Rows Moved (exact) and Data Moved (more than 0). Returns { rows, data }.",
+    "On a pipeline's Number Of Runs tab, expect the latest run's Rows Moved (exact `rows`, or at least `minRows`) and Data Moved (more than 0). Returns { rows, data }.",
   inputs: {
     connector: { required: true, description: 'Connector name as shown in the UI, e.g. Regression' },
     pipeline: { required: true, description: 'Pipeline (dataset) name' },
-    rows: { required: true, description: 'Expected Rows Moved of the latest run as the UI shows it, e.g. 1, or "-" (shown for 0)' },
+    rows: { description: 'Expected Rows Moved of the latest run as the UI shows it, e.g. 1, or "-" (shown for 0)' },
+    minRows: { description: 'Instead of rows: at least this many (for sources whose row count is not fixed, e.g. the Logs connector)' },
   },
   screen: i => ({ screen: 'pipeline', connector: i.connector, pipeline: i.pipeline, tab: 'Number Of Runs' }),
-  async run(page, { pipeline, rows }) {
+  async run(page, { pipeline, rows, minRows }) {
+    if ((rows === undefined) === (minRows === undefined)) throw new Error('expectLastRunMoved: give exactly one of rows / minRows');
     const run = await latestRun(page);
     if (!run) throw new Error(`"${pipeline}" has no runs`);
     const what = `"${pipeline}" latest run`;
 
     // The runs tab shows "-" instead of 0 (as on develop), so "-" is a valid expectation
-    if (String(rows) === '-') expect(run.rowsMoved, `${what} Rows Moved`).toBe('-');
+    if (minRows !== undefined)
+      expect(toNumber(run.rowsMoved, `${what} Rows Moved`), `${what} Rows Moved (at least ${minRows})`).toBeGreaterThanOrEqual(Number(minRows));
+    else if (String(rows) === '-') expect(run.rowsMoved, `${what} Rows Moved`).toBe('-');
     else expect(toNumber(run.rowsMoved, `${what} Rows Moved`), `${what} Rows Moved`).toBe(Number(rows));
 
     const data = toNumber(run.dataMoved, `${what} Data Moved`);

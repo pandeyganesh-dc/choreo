@@ -1,9 +1,9 @@
 # Logs connector (V2 logs/logs.py now reads job_runs): run a named Logs pipeline, expect SUCCESS and some rows.
-# It reads the account's own run history, so rows depend on history: only "more than 0" is checked.
-description: Run a named Logs connector pipeline and expect SUCCESS with rows moved
+# Quick repro (pipeline already exists). Rows depend on the account's run history: only "at least 1" is checked.
+description: Run a named Logs connector pipeline and expect SUCCESS with at least 1 row moved
 params:
   pipeline:            # required: a pipeline of the Logs connector, e.g. logs_connector_01
 steps:
   - runPipeline: { connector: Logs, pipeline: $pipeline }
   - expectRunStatus: { connector: Logs, pipeline: $pipeline, status: SUCCESS }
-  - readLatestRun: { connector: Logs, pipeline: $pipeline, as: run }
+  - expectLastRunMoved: { connector: Logs, pipeline: $pipeline, minRows: 1 }
