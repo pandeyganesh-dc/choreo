@@ -1,0 +1,8 @@
+# Dashboard → Data Sources → Regression → Data Pipelines must agree with a recent pipeline's own runs tab.
+# Needs one recent successful Regression run: reuses one, makes one only if none exists.
+description: Expect the Dashboard's Regression → Data Pipelines row to agree with a recent pipeline's runs (makes a run only if none exists)
+steps:
+  - findRunPipeline: { connector: Regression, status: SUCCESS, withinDays: 6, as: p }
+    orElse: { run_regress_regular: {} }
+  - readLatestRun: { connector: Regression, pipeline: $p.pipeline, as: run }
+  - expectDashboardPipelineRow: { connector: Regression, pipeline: $p.pipeline, status: $run.status, rows: $run.rows, runs: $run.runs }

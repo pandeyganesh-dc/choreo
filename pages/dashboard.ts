@@ -9,6 +9,11 @@ export const dashboard = (page: Page) => ({
   dataSourcesTitle: page.getByRole('heading', { name: 'Data Sources', exact: true }),
   // The table with a "Reports Configured" column (other tables on the page don't have it)
   dataSourcesTable: page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Reports Configured' }) }),
+  // Clicking a connector's name in Data Sources drills into its "Data Pipelines" table (back arrow returns)
+  connectorLink: (connector: string) =>
+    page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Reports Configured' }) }).getByText(connector, { exact: true }),
+  pipelinesTitle: page.getByRole('heading', { name: 'Data Pipelines', exact: true }),
+  pipelinesTable: page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Data Pipeline Name' }) }),
   // Error Details: failed / errored / partial runs of the date range, one card per pipeline (and error kind),
   // each with "ID- <id>", the pipeline name, View Logs, Status label and "Error Time"
   errorSearch: page.getByRole('textbox', { name: 'Search for Pipeline or Datasource' }),
