@@ -3,6 +3,7 @@
 // Rows Moved = total over all its runs (exact when it has one run, at least the latest's rows otherwise).
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { same, near, atLeast } from '../core/errors';
 import { log } from '../core/log';
 import { datasource } from '../pages/datasource';
 import { readRow, uiNumber, uiTime } from '../pages/table';
@@ -32,12 +33,12 @@ export default defineTask({
     const seen = { status: col('Last Run Status'), lastRunAt: col('Last Run Time'), rows: col('Rows Moved') };
     log(`    connector row "${pipeline}": ${JSON.stringify(seen)}; runs tab: ${status}, ${runAt}, rows ${rows}, ${runs} runs`);
     const what = `Connector page row "${pipeline}"`;
-    expect(seen.status, `${what} Last Run Status`).toBe(status);
-    expect(Math.abs(uiTime(seen.lastRunAt, `${what} Last Run Time`) - uiTime(String(runAt), 'runs tab Start Time')), `${what} Last Run Time ${seen.lastRunAt} vs ${runAt}`)
-      .toBeLessThanOrEqual(SKEW_MS);
+    same(seen.status, status, `The connector page shows "${pipeline}" last run as ${seen.status}, but its runs tab says ${status}`);
+    near(uiTime(seen.lastRunAt, `${what} Last Run Time`), uiTime(String(runAt), 'runs tab Start Time'), SKEW_MS, seen.lastRunAt, String(runAt),
+      `The connector page shows a different Last Run Time for "${pipeline}" than its runs tab`);
     const total = uiNumber(seen.rows, `${what} Rows Moved`);
-    if (Number(runs) === 1) expect(total, `${what} Rows Moved (= its only run)`).toBe(uiNumber(String(rows), 'runs tab Rows Moved'));
-    else expect(total, `${what} Rows Moved (≥ latest run)`).toBeGreaterThanOrEqual(uiNumber(String(rows), 'runs tab Rows Moved'));
+    if (Number(runs) === 1) same(total, uiNumber(String(rows), 'runs tab Rows Moved'), `The connector page's Rows Moved for "${pipeline}" differs from its only run`);
+    else atLeast(total, uiNumber(String(rows), 'runs tab Rows Moved'), `The connector page's Rows Moved for "${pipeline}" is lower than its latest run alone`);
     return { pipeline, ...seen };
   },
 });

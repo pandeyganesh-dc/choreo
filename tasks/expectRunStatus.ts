@@ -1,6 +1,7 @@
 // Check: wait for a pipeline's latest run to finish, then expect its status.
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { same } from '../core/errors';
 import { pipeline as pipelinePage, latestRun } from '../pages/pipeline';
 import { log } from '../core/log';
 
@@ -33,11 +34,11 @@ export default defineTask({
         { timeout: Number(minutes) * 60_000, intervals: [2_000, 5_000], message: `"${pipeline}" run did not finish in ${minutes} min` },
       )
       .toBe(false);
-    expect(current, `"${pipeline}" latest run`).toBe(status);
+    same(current, status, `The latest run of "${pipeline}" ended as ${current}`, current === 'ERROR' || current === 'FAILED' ? 'Open "View Logs" on that run (Number Of Runs tab) to see why it failed.' : undefined);
 
     log(`  header now: ${await p.lastRun.innerText().catch(() => '(not shown)')}`);
     // The header "(Last Run - X)" updates on its own a little later: it must agree
-    await expect(p.lastRun, `"${pipeline}" header`).toHaveText(`(Last Run - ${status})`, { timeout: 30_000 });
+    await expect(p.lastRun, `The header of "${pipeline}" doesn't show the same last run status as its runs list`).toHaveText(`(Last Run - ${status})`, { timeout: 30_000 });
     return { connector, pipeline, status: current };
   },
 });

@@ -1,6 +1,7 @@
 // Check: on a pipeline's "Number Of Runs" tab, expect what its latest run moved.
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { same, atLeast } from '../core/errors';
 import { latestRun } from '../pages/pipeline';
 
 // "1,234" -> 1234. A cell without a number (e.g. "-" when the run saved no result) is an error, not 0.
@@ -28,12 +29,12 @@ export default defineTask({
 
     // The runs tab shows "-" instead of 0 (as on develop), so "-" is a valid expectation
     if (minRows !== undefined)
-      expect(toNumber(run.rowsMoved, `${what} Rows Moved`), `${what} Rows Moved (at least ${minRows})`).toBeGreaterThanOrEqual(Number(minRows));
-    else if (String(rows) === '-') expect(run.rowsMoved, `${what} Rows Moved`).toBe('-');
-    else expect(toNumber(run.rowsMoved, `${what} Rows Moved`), `${what} Rows Moved`).toBe(Number(rows));
+      atLeast(toNumber(run.rowsMoved, `${what} Rows Moved`), Number(minRows), `The latest run of "${pipeline}" moved fewer rows than expected`);
+    else if (String(rows) === '-') same(run.rowsMoved, '-', `The latest run of "${pipeline}" moved rows, but none were expected ("-" means 0)`);
+    else same(toNumber(run.rowsMoved, `${what} Rows Moved`), Number(rows), `The latest run of "${pipeline}" moved ${run.rowsMoved} rows instead of ${rows}`);
 
     const data = toNumber(run.dataMoved, `${what} Data Moved`);
-    expect(data, `${what} Data Moved`).toBeGreaterThan(0);
+    atLeast(data, 1, `The latest run of "${pipeline}" shows no Data Moved`);
     return { pipeline, rows: run.rowsMoved, data };
   },
 });

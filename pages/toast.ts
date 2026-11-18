@@ -2,6 +2,7 @@
 // "Something went wrong. Please try again later." (the app's own) and the server's generic
 // "The server encountered an internal error ..." (an unhandled 500 passed through).
 import { Page, expect } from '@playwright/test';
+import { fail } from '../core/errors';
 
 export const errorToast = (page: Page) => page.getByText(/Something went wrong|server encountered an internal error/);
 
@@ -13,5 +14,11 @@ export async function expectNoErrorToast(page: Page, what: string) {
   // Toasts can come a moment after the spinners stop
   await toasts.first().waitFor({ timeout: 3_000 }).catch(() => {});
   const texts = (await toasts.allInnerTexts()).map(t => t.trim());
-  if (texts.length) throw new Error(`${what} shows ${texts.length} error toast(s): ${[...new Set(texts)].map(t => `"${t}"`).join(', ')}`);
+  if (texts.length)
+    throw fail({
+      title: `${what} showed an error message instead of loading`,
+      expected: 'no error message',
+      found: [...new Set(texts)].map(t => `"${t}"`).join(', '),
+      hint: 'An API call behind this screen failed. Developers: `docker compose logs frontendapi` shows which one.',
+    });
 }

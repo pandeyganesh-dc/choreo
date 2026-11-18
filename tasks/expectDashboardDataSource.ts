@@ -3,6 +3,7 @@
 // our own run (read beforehand with readLatestRun). It passes on a busy STAGING as well as on a quiet d-l.
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { atLeast, fail } from '../core/errors';
 import { log } from '../core/log';
 import { dashboard, dataSourcesLoaded } from '../pages/dashboard';
 import { readRow, uiNumber, uiTime } from '../pages/table';
@@ -34,13 +35,11 @@ export default defineTask({
     log(`    dashboard row "${connector}": ${JSON.stringify(seen)}; our run at ${runAt}, rows ${rows}`);
 
     const what = `Dashboard Data Sources "${connector}"`;
-    expect(uiNumber(seen.runs, `${what} Number of Runs`), `${what} Number of Runs`).toBeGreaterThanOrEqual(1);
-    expect(uiNumber(seen.rows, `${what} Rows Moved`), `${what} Rows Moved (≥ our run's)`).toBeGreaterThanOrEqual(
-      uiNumber(String(rows), "our run's Rows Moved"),
-    );
+    atLeast(uiNumber(seen.runs, `${what} Number of Runs`), 1, `The Dashboard shows no runs for "${connector}", though we have one`);
+    atLeast(uiNumber(seen.rows, `${what} Rows Moved`), uiNumber(String(rows), "our run's Rows Moved"), `The Dashboard's Rows Moved for "${connector}" is lower than our own run moved`);
     // Screens read different timestamps of the same run (created vs started): the runs tab can be a second or two later
-    expect(uiTime(seen.lastRunAt, `${what} Last Run at`), `${what} Last Run at ${seen.lastRunAt} (≥ our run at ${runAt})`)
-      .toBeGreaterThanOrEqual(uiTime(String(runAt), "our run's Start Time") - SKEW_MS);
+    if (uiTime(seen.lastRunAt, `${what} Last Run at`) < uiTime(String(runAt), "our run's Start Time") - SKEW_MS)
+      throw fail({ title: `The Dashboard's "Last Run at" for "${connector}" is older than our run`, expected: `${runAt} or later`, found: seen.lastRunAt });
     return { connector, ...seen };
   },
 });

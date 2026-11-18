@@ -2,6 +2,7 @@
 // opened from Execution History → View Tasks if it isn't already open).
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { same } from '../core/errors';
 import { log } from '../core/log';
 import { orchestration, newestRunTasks } from '../pages/orchestration';
 
@@ -31,7 +32,7 @@ export default defineTask({
         { timeout: Number(minutes) * 60_000, intervals: [3_000, 5_000], message: `"${name}" run did not finish in ${minutes} min` },
       )
       .toBe(false);
-    expect(current, `"${name}" newest run status`).toBe(status);
+    same(current, status, `The newest run of orchestration "${name}" ended as ${current}`);
     return { orchestration: name, status: current };
   },
 });

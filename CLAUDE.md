@@ -127,6 +127,12 @@ When a flow fails or behaves oddly, read the run.log first. Log from tasks with 
   A sync's page has "Run Sync" (no confirm dialog; toast "Configured sync run was successful." = triggered, not finished)
   and "(Last Run - STATUS)". Runs stay QUEUED unless the d-l's `reverse` service is up.
 - A pipeline's page header shows "(Last Run - STATUS)". It reads QUEUED/RUNNING while a run is in progress and "No Run Initiated" before any run.
+- Failures are read by QA, so they must say in plain words what went wrong (core/errors.ts). In checks use
+  `same(found, expected, title)`, `atLeast`, `atMost`, `near`, or `throw fail({ title, expected, found, hint })`.
+  The title is the sentence a person would write on spotting the problem ("The latest run of "x" ended as ERROR"),
+  not a label ("x status"). Add a `hint` when there's an obvious next step. Playwright's own errors (timeouts,
+  locators, expect) are translated automatically; give `expect(locator, '<sentence>')` a sentence too.
+  The report shows the flow › step chain, expected/found, the screen (breadcrumb style), the inputs, help and evidence.
 - Actions and checks are separate tasks. Checks are named `expect…` and only look at the UI (no DB or API).
 
 ## Done means

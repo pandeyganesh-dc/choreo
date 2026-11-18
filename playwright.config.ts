@@ -14,7 +14,8 @@ export default defineConfig({
   timeout: 30 * 60_000,             // a whole flow (incl. waiting for pipeline runs) must fit in this
   expect: { timeout: 30_000 },
   workers: 1,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  // core/reporter.ts: steps with ✓/✗ and one readable error report; the HTML report is kept for devs
+  reporter: [['./core/reporter.ts'], ['html', { open: 'never' }]],
   use: {
     baseURL: config.baseURL,
     viewport: headed ? null : { width: 1440, height: 900 },

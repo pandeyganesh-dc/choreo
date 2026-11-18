@@ -3,6 +3,7 @@
 // successful runs and at least 1 configured report in the shown date range (last 7 days).
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { atLeast } from '../core/errors';
 import { log } from '../core/log';
 import { expectNoErrorToast } from '../pages/toast';
 
@@ -32,8 +33,8 @@ export default defineTask({
     };
     const seen = { success: await value('Successful Runs'), reports: await value('Total reports configured'), errors: await value('Runs with errors + Partial Success Runs') };
     log(`    workspace "${workspace}" cards: ${JSON.stringify(seen)}`);
-    expect(Number(seen.success), `"${workspace}" Successful Runs`).toBeGreaterThanOrEqual(Number(minSuccess));
-    expect(Number(seen.reports), `"${workspace}" Total reports configured`).toBeGreaterThanOrEqual(1);
+    atLeast(Number(seen.success), Number(minSuccess), `Workspace "${workspace}" shows fewer Successful Runs than we just made`);
+    atLeast(Number(seen.reports), 1, `Workspace "${workspace}" shows no configured reports`);
     return { workspace, ...seen };
   },
 });

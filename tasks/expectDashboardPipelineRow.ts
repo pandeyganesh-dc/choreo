@@ -3,6 +3,7 @@
 // counts are bounded, not exact: 1 ≤ Number of Runs ≤ the pipeline's total runs, Rows Moved ≥ its latest run's rows.
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { same, atLeast, atMost } from '../core/errors';
 import { log } from '../core/log';
 import { dashboard, dataSourcesLoaded } from '../pages/dashboard';
 import { expectNoErrorToast } from '../pages/toast';
@@ -32,11 +33,11 @@ export default defineTask({
     const seen = { status: col('Last run status'), runs: col('Number of Runs'), rows: col('Rows Moved') };
     log(`    dashboard pipeline row "${pipeline}": ${JSON.stringify(seen)}; runs tab: ${status}, rows ${rows}, ${runs} runs`);
     const what = `Dashboard Data Pipelines "${pipeline}"`;
-    expect(seen.status.toUpperCase(), `${what} Last run status`).toBe(String(status).toUpperCase());
+    same(seen.status.toUpperCase(), String(status).toUpperCase(), `The Dashboard shows "${pipeline}" last run as ${seen.status}, but its runs tab says ${status}`);
     const n = uiNumber(seen.runs, `${what} Number of Runs`);
-    expect(n, `${what} Number of Runs (≥ 1)`).toBeGreaterThanOrEqual(1);
-    expect(n, `${what} Number of Runs (≤ its ${runs} runs)`).toBeLessThanOrEqual(Number(runs));
-    expect(uiNumber(seen.rows, `${what} Rows Moved`), `${what} Rows Moved (≥ latest run's)`).toBeGreaterThanOrEqual(uiNumber(String(rows), 'runs tab Rows Moved'));
+    atLeast(n, 1, `The Dashboard shows no runs for "${pipeline}"`);
+    atMost(n, Number(runs), `The Dashboard shows more runs for "${pipeline}" than the pipeline has`);
+    atLeast(uiNumber(seen.rows, `${what} Rows Moved`), uiNumber(String(rows), 'runs tab Rows Moved'), `The Dashboard's Rows Moved for "${pipeline}" is lower than its latest run alone`);
     return { pipeline, ...seen };
   },
 });

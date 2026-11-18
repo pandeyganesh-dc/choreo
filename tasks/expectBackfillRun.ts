@@ -1,6 +1,7 @@
 // Check: after backfillPipeline, a new run shows up under the Back Fill tab's "Backfill Runs:" and finishes as expected.
 import { expect } from '@playwright/test';
 import { defineTask } from '../core/task';
+import { same, fail } from '../core/errors';
 import { log } from '../core/log';
 import { pipeline as pipelinePage, latestRun } from '../pages/pipeline';
 import { readRow } from '../pages/table';
@@ -47,13 +48,15 @@ export default defineTask({
       // Where did the run go? Look at the normal runs list, like a user would
       await p.runsTab.click();
       const latest = await latestRun(page);
-      throw new Error(
-        `${what}: no new backfill run in ${minutes} min (still ${total}). ` +
-          (latest ? `Number Of Runs' newest run: ${latest.runType}, ${latest.status}, started ${latest.startTime}.` : 'Number Of Runs is empty.'),
-      );
+      throw fail({
+        title: `No backfill run of "${pipeline}" appeared under Back Fill → Backfill Runs (waited ${minutes} min)`,
+        expected: `a new backfill run (more than ${before})`,
+        found: latest ? `still ${total}; the newest run in Number Of Runs is ${latest.runType}, ${latest.status}, started ${latest.startTime}` : `still ${total}; Number Of Runs is empty`,
+        hint: 'The app said the backfill started, but it ran (if at all) as an ordinary run. Developers: check the run_type the backfill request sends.',
+      });
     }
     if (!ok) throw new Error(`${what}: newest run still ${current} after ${minutes} min`);
-    expect(current, `${what} newest status`).toBe(status);
+    same(current, status, `The backfill run of "${pipeline}" ended as ${current}`);
     return { pipeline, status: current, runs: total };
   },
 });

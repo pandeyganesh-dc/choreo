@@ -106,6 +106,26 @@ export async function whereAmI(page: Page): Promise<Spot> {
   return { screen: 'unknown' };
 }
 
+// The screen as a person names it, like the app's breadcrumbs: "Regression › my_pipeline › Number Of Runs"
+export function screenName(s: Spot): string {
+  const tab = s.tab ? ` › ${s.tab}` : '';
+  switch (s.screen) {
+    case 'home': return 'Home';
+    case 'dashboard': return 'Dashboard';
+    case 'connectors': return 'ETL › All Connectors';
+    case 'connector': return `${s.connector}${tab}`;
+    case 'pipeline': return `${s.connector} › ${s.pipeline}${tab}`;
+    case 'warehouses': return 'Warehouses';
+    case 'destinations': return 'Reverse ETL › All Destinations';
+    case 'destination': return `${s.destination}${tab}`;
+    case 'sync': return `${s.destination} › ${s.sync}`;
+    case 'orchestrations': return 'Orchestrations';
+    case 'orchestration': return `Orchestrations › ${s.orchestration}${tab}`;
+    case 'settings': return `Settings${tab}`;
+    default: return `a screen choreo doesn't know${s.seen ? ` (${s.seen})` : ''}`;
+  }
+}
+
 export const describe = (s: Spot) =>
   [s.screen, s.seen && `(${s.seen})`, s.connector ?? s.destination, s.pipeline ?? s.sync ?? s.orchestration, s.tab && `[${s.tab}]`].filter(Boolean).join(' ');
 
