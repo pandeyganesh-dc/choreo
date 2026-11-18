@@ -23,6 +23,15 @@ export const pipeline = (page: Page) => ({
   editFieldIcon: page.getByLabel('Edit Field'),
   saveFieldIcon: page.getByTestId('CheckIcon'),
   edited: page.getByRole('alert').filter({ hasText: 'Report edited successfully.' }),
+  // Back Fill tab: "Custom Run" form (date inputs, YYYY-MM-DD) and the "Backfill Runs:" list under it
+  backfillTab: page.getByRole('tab', { name: 'Back Fill', exact: true }),
+  backfillStart: page.getByRole('textbox', { name: 'Start Date' }),
+  backfillEnd: page.getByRole('textbox', { name: 'End Date' }),
+  backfillRunBtn: page.getByRole('tabpanel').getByRole('button', { name: 'Run', exact: true }),
+  backfillStarted: page.getByText('Backfill run was successful.', { exact: true }),
+  backfillRejected: page.getByText(/Backfill run was unsuccessful/),
+  // "Showing 0-0 of 0 records" under "Backfill Runs:"
+  backfillPager: page.getByRole('tabpanel').getByText(/^Showing .* of \d+ records$/),
 });
 
 // Reads the status from "(Last Run - X)", e.g. "SUCCESS".
@@ -58,6 +67,9 @@ export async function latestRun(page: Page) {
   return {
     // Start Time identifies a run on screen
     id: `${col('Start Time')} ${col('Run Type')}`,
+    startTime: col('Start Time'),
+    runType: col('Run Type'),
+    total, // how many runs the pipeline has
     status: col('Status'),
     rowsMoved: col('Rows Moved'),
     dataMoved: col('Data Moved'),

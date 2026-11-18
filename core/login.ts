@@ -8,7 +8,11 @@ export const STATE_FILE = '.auth/state.json';
 
 export async function ensureLoggedIn(page: Page) {
   const l = login(page);
-  await page.goto('/', { waitUntil: 'networkidle' });
+  // Already in the app (the live choreo window): stay on whatever screen it shows; goTo starts from there
+  if (page.url().startsWith(config.baseURL) && !/\/login/.test(page.url())) {
+    if (await l.loggedInMarker.waitFor({ timeout: 10_000 }).then(() => true, () => false)) return false;
+  }
+  await page.goto(config.baseURL, { waitUntil: 'networkidle' });
   await expect(l.email.or(l.loggedInMarker)).toBeVisible({ timeout: 60_000 });
   if (await l.loggedInMarker.isVisible()) return false; // saved session still good
 

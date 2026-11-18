@@ -11,6 +11,10 @@ import { log as fileLog } from '../core/log';
 export type Screen =
   | 'unknown'
   | 'home' // after login: "Welcome to DataChannel"
+  | 'dashboard' // sidebar → Dashboard
+  | 'orchestrations' // sidebar → Orchestration: the list
+  | 'orchestration' // one orchestration's page (tabs: Setup, Execution History)
+  | 'settings' // sidebar → Settings → a link; tabs: Account Settings, Data Usage, Workspaces, API Management
   | 'connectors' // ETL → All Connectors
   | 'connector' // one connector's page (tabs: SetUp, Configured Data Pipelines, ...)
   | 'pipeline' // one configured pipeline's page (tabs: SetUp, Number Of Runs, ...)
@@ -25,6 +29,7 @@ export type Spot = {
   pipeline?: string;
   destination?: string;
   sync?: string;
+  orchestration?: string;
   tab?: string; // selected top-level tab; leave out in a target to accept any tab
   // Target only: arrive by loading the screen anew (via the sidebar), even if already there. For screens that
   // show stale data until you navigate away (e.g. a connector's pipeline count after deletes).
@@ -72,12 +77,23 @@ export async function whereAmI(page: Page): Promise<Spot> {
     if (pipeline) return { screen: 'pipeline', connector: c[1], pipeline, tab: await selectedTab(page) };
   }
   if (c[0] === 'Connectors' && c.length === 2) return { screen: 'connector', connector: c[1], tab: await selectedTab(page) };
+  // "Orchestrations / Edit (<name>)"
+  if (c[0] === 'Orchestrations' && c.length === 2) {
+    const m = c[1].match(/^Edit \((.*)\)$/);
+    if (m) return { screen: 'orchestration', orchestration: m[1], tab: await selectedTab(page) };
+  }
   if (c[0] === 'Destinations' && c.length === 3) {
     const sync = await bracketTitle(page);
     if (sync) return { screen: 'sync', destination: c[1], sync, tab: await selectedTab(page) };
   }
   if (c[0] === 'Destinations' && c.length === 2) return { screen: 'destination', destination: c[1], tab: await selectedTab(page) };
   if (await page.getByText('Welcome to DataChannel, Let’s get started!', { exact: true }).isVisible()) return { screen: 'home' };
+  if (await page.getByRole('banner').getByRole('heading', { name: 'Dashboard', exact: true, level: 6 }).isVisible())
+    return { screen: 'dashboard' };
+  if (!c.length && (await page.getByRole('banner').getByRole('heading', { name: 'Orchestrations', exact: true, level: 6 }).isVisible()))
+    return { screen: 'orchestrations' };
+  if (await page.getByRole('banner').getByRole('heading', { name: 'Settings', exact: true, level: 6 }).isVisible())
+    return { screen: 'settings', tab: await selectedTab(page) };
   if (await page.getByRole('tabpanel', { name: 'Explore Connectors' }).locator('.Connector-title1').first().isVisible())
     return { screen: 'connectors' };
   if (await page.getByRole('tabpanel', { name: 'Explore Destinations' }).locator('.Connector-title1').first().isVisible())
@@ -91,12 +107,12 @@ export async function whereAmI(page: Page): Promise<Spot> {
 }
 
 export const describe = (s: Spot) =>
-  [s.screen, s.seen && `(${s.seen})`, s.connector ?? s.destination, s.pipeline ?? s.sync, s.tab && `[${s.tab}]`].filter(Boolean).join(' ');
+  [s.screen, s.seen && `(${s.seen})`, s.connector ?? s.destination, s.pipeline ?? s.sync ?? s.orchestration, s.tab && `[${s.tab}]`].filter(Boolean).join(' ');
 
 // Does `here` satisfy `target`? Every field the target names must match; fields it leaves out don't matter.
 const matches = (here: Spot, target: Spot) =>
   (Object.keys(target) as (keyof Spot)[]).every(k => k === 'fresh' || k === 'seen' || target[k] === undefined || here[k] === target[k]);
-const key = (s: Spot) => JSON.stringify([s.screen, s.connector, s.pipeline, s.destination, s.sync, s.tab]);
+const key = (s: Spot) => JSON.stringify([s.screen, s.connector, s.pipeline, s.destination, s.sync, s.orchestration, s.tab]);
 
 // ---------- moves (one user action each) ----------
 
@@ -160,6 +176,23 @@ function movesFrom(here: Spot, t: Spot): Move[] {
       await s.allDestinations.click();
     });
   if (here.screen !== 'warehouses') sidebar('sidebar → Warehouses', { screen: 'warehouses' }, s => s.warehouses.click());
+  if (here.screen !== 'dashboard') sidebar('sidebar → Dashboard', { screen: 'dashboard' }, s => s.dashboard.click());
+  if (here.screen !== 'orchestrations') sidebar('sidebar → Orchestration', { screen: 'orchestrations' }, s => s.orchestrations.click());
+  // Settings opens a flyout of links; Data Usage → Summary is one of them (the page then has its own tabs)
+  if (here.screen !== 'settings')
+    sidebar('sidebar → Settings → Data Usage Summary', { screen: 'settings', tab: 'Data Usage' }, async s => {
+      await s.settings.click();
+      // The flyout's sections are collapsed: open "Data Usage", then its "Summary" link
+      await s.settingsSection('Data Usage').click();
+      await s.settingsLink('/settings?tab=data_usage').click();
+    });
+  // Workspaces has its own link, so its check never sees toasts left over from another tab
+  if (here.screen !== 'settings')
+    sidebar('sidebar → Settings → Workspace', { screen: 'settings', tab: 'Workspaces' }, async s => {
+      await s.settings.click();
+      await s.settingsSection('Workspace').click();
+      await s.settingsLink('/settings?tab=workspaces').click();
+    });
 
   switch (here.screen) {
     case 'connectors':
@@ -181,13 +214,37 @@ function movesFrom(here: Spot, t: Spot): Move[] {
         });
       break;
     case 'pipeline':
-      for (const tab of ['SetUp', 'Number Of Runs'])
+      for (const tab of ['SetUp', 'Number Of Runs', 'Back Fill'])
         if (here.tab !== tab) m.push({ label: `tab "${tab}"`, to: { ...here, tab }, go: clickTab(tab) });
       m.push({
         label: `breadcrumb "${here.connector}"`,
         to: { screen: 'connector', connector: here.connector, tab: 'SetUp' },
         go: crumb(here.connector!),
       });
+      break;
+    case 'orchestrations':
+      if (t.orchestration)
+        m.push({
+          label: `search "${t.orchestration}" → open it`,
+          to: { screen: 'orchestration', orchestration: t.orchestration, tab: 'Setup' },
+          go: async page => {
+            await page.getByRole('textbox', { name: 'Search Data Source or Records' }).fill(t.orchestration!);
+            const link = page.getByRole('link', { name: t.orchestration, exact: true });
+            await link.waitFor({ timeout: 15_000 }).catch(() => {
+              throw new Error(`No orchestration named "${t.orchestration}"`);
+            });
+            await link.click();
+          },
+        });
+      break;
+    case 'orchestration':
+      for (const tab of ['Setup', 'Execution History'])
+        if (here.tab !== tab) m.push({ label: `tab "${tab}"`, to: { ...here, tab }, go: clickTab(tab) });
+      m.push({ label: 'breadcrumb "Orchestrations"', to: { screen: 'orchestrations' }, go: crumb('Orchestrations') });
+      break;
+    case 'settings':
+      for (const tab of ['Account Settings', 'Data Usage', 'Workspaces', 'API Management'])
+        if (here.tab !== tab) m.push({ label: `tab "${tab}"`, to: { ...here, tab }, go: clickTab(tab) });
       break;
     case 'destinations':
       if (t.destination)
@@ -298,7 +355,7 @@ export async function goTo(page: Page, target: Spot, show: (line: string) => voi
       return await whereAmI(page);
     } catch (e) {
       // Only retry from a clean start (sidebar); a real problem (no such pipeline, ...) fails again the same way
-      if (attempt > 1 || /has no|No connector|No destination/.test(String(e))) throw e;
+      if (attempt > 1 || /has no|No connector|No destination|No orchestration/.test(String(e))) throw e;
       log(` ↳ move failed (${String(e).split('\n')[0]}); re-reading the screen`);
     }
   }

@@ -1,13 +1,29 @@
 // The one Playwright test file: runs exactly one flow (FLOW), each step a report step.
 // The CLI (core/cli.ts) sets FLOW / FLOW_PARAMS. Without FLOW nothing runs, on purpose:
 // flows change shared d-l state, so they must never all run together.
-import { test, Page } from '@playwright/test';
+import { test as base, Page } from '@playwright/test';
+import { attachLive, detachLive } from './browser';
 import { loadTasks, loadFlows, checkFlow, isForEach, isRequired, Step, Flow } from './load';
 import { ensureLoggedIn } from './login';
 import { goTo, whereAmI, describe } from '../pages/screens';
 import { startRunLog, log, brief, runDir } from './log';
 import fs from 'fs';
 import path from 'path';
+
+// --watch: work in the live choreo window (core/browser.ts), which stays open after the run.
+// Headless: a fresh browser per run, as Playwright gives it.
+const live = process.env.CHOREO_LIVE === '1';
+const test = live
+  ? base.extend<{ page: Page }>({
+      page: async ({}, use) => {
+        const { browser, page, how } = await attachLive();
+        console.log(`choreo window: ${how}`);
+        log(`choreo window: ${how}`);
+        await use(page);
+        await detachLive(browser);
+      },
+    })
+  : base;
 
 const lib = { tasks: loadTasks(), flows: loadFlows() };
 const only = process.env.FLOW;
@@ -37,6 +53,37 @@ async function runFlow(page: Page, flow: Flow, input: Record<string, any>, prefi
   return Object.fromEntries(Object.entries(flow.outputs).map(([k, v]) => [k, resolve(v, vars)]));
 }
 
+// Runs one task or flow with its inputs ($refs resolved) and returns its result
+async function runCall(page: Page, at: string, call: string, raw: Record<string, any>, vars: Record<string, any>) {
+  const input: Record<string, any> = {};
+  for (const [k, v] of Object.entries(raw)) input[k] = resolve(v, vars);
+
+  let result: Record<string, any> | void;
+  const flow = lib.flows[call];
+  const t0 = Date.now();
+  if (flow) {
+    log(`step ${at} ${call} [flow] start ${brief(input)}`);
+    result = await test.step(`${at}. ${call} [flow]${show(input)}`, () => runFlow(page, flow, input, `${at}.`));
+  } else {
+    const task = lib.tasks[call];
+    const full: Record<string, any> = {};
+    for (const [k, spec] of Object.entries(task.inputs)) if (spec.default !== undefined) full[k] = spec.default;
+    Object.assign(full, input);
+    log(`step ${at} ${call} start ${brief(full)}`);
+    result = await test.step(`${at}. ${call}${show(full)}`, async () => {
+      try {
+        if (task.screen) await goTo(page, task.screen(full), line => console.log(`${at}. ${call}${line}`));
+        return await task.run(page, full);
+      } catch (e) {
+        log(`step ${at} ${call} FAILED after ${((Date.now() - t0) / 1000).toFixed(1)}s: ${(e as Error)?.stack ?? e}`);
+        throw e;
+      }
+    });
+  }
+  log(`step ${at} ${call} done in ${((Date.now() - t0) / 1000).toFixed(1)}s → ${brief(result ?? {})}`);
+  return result ?? {};
+}
+
 // Runs steps in order, numbered 1, 2, … A called flow's steps nest under it (3.1, 3.2, …);
 // inside a forEach at step 2 they are 2.<item>.<step>, e.g. 2.3.1
 async function runSteps(page: Page, steps: Step[], vars: Record<string, any>, prefix: string) {
@@ -54,32 +101,12 @@ async function runSteps(page: Page, steps: Step[], vars: Record<string, any>, pr
       continue;
     }
 
-    const input: Record<string, any> = {};
-    for (const [k, v] of Object.entries(s.input)) input[k] = resolve(v, vars);
-
-    let result: Record<string, any> | void;
-    const flow = lib.flows[s.call];
-    const t0 = Date.now();
-    if (flow) {
-      log(`step ${at} ${s.call} [flow] start ${brief(input)}`);
-      result = await test.step(`${at}. ${s.call} [flow]${show(input)}`, () => runFlow(page, flow, input, `${at}.`));
-    } else {
-      const task = lib.tasks[s.call];
-      const full: Record<string, any> = {};
-      for (const [k, spec] of Object.entries(task.inputs)) if (spec.default !== undefined) full[k] = spec.default;
-      Object.assign(full, input);
-      log(`step ${at} ${s.call} start ${brief(full)}`);
-      result = await test.step(`${at}. ${s.call}${show(full)}`, async () => {
-        try {
-          if (task.screen) await goTo(page, task.screen(full), line => console.log(`${at}. ${s.call}${line}`));
-          return await task.run(page, full);
-        } catch (e) {
-          log(`step ${at} ${s.call} FAILED after ${((Date.now() - t0) / 1000).toFixed(1)}s: ${(e as Error)?.stack ?? e}`);
-          throw e;
-        }
-      });
+    let result = await runCall(page, at, s.call, s.input, vars);
+    // Found nothing: make it instead (orElse), and use that under the same name
+    if (s.orElse && result?.found === false) {
+      log(`step ${at} ${s.call} found nothing → orElse ${s.orElse.call}`);
+      result = await runCall(page, `${at}e`, s.orElse.call, s.orElse.input, vars);
     }
-    log(`step ${at} ${s.call} done in ${((Date.now() - t0) / 1000).toFixed(1)}s → ${brief(result ?? {})}`);
     if (s.as) vars[s.as] = result ?? {};
   }
 }
@@ -100,7 +127,7 @@ if (flow) {
     if (errors.length) throw new Error(`Flow "${flow.name}" is invalid:\n  - ${errors.join('\n  - ')}`);
 
     // Everything below happens in this one window, login included, through every called flow
-    await test.step('0. login (skipped if the saved session is valid)', () => ensureLoggedIn(page));
+    await test.step('0. login (skipped if already logged in)', () => ensureLoggedIn(page));
 
     try {
       const out = await runFlow(page, flow, given, '');

@@ -1,0 +1,7 @@
+# Settings → Workspaces → Default: usage cards must load and count at least our own recent successful run.
+# Needs only one recent successful Regression run: reuses one, makes one only if none exists.
+description: Expect the Default workspace's usage cards to load and include a recent successful run (makes one only if none exists)
+steps:
+  - findRunPipeline: { connector: Regression, status: SUCCESS, withinDays: 6, as: p }
+    orElse: { run_regress_regular: {} }
+  - expectWorkspaceUsage: { workspace: Default }

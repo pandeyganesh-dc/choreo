@@ -2,7 +2,8 @@
 // npm run list                                                    show all tasks and flows
 // There is deliberately no "run all": flows change shared d-l state and can conflict.
 // To run several things in order, write a flow that lists them.
-// --watch = visible browser, slowed down (SLOW=ms, default 500) so each step can be followed
+// --watch = the live choreo window (core/browser.ts): stays open between runs, each run continues from the
+//           screen it shows; slowed down (SLOW=ms, default 500) so each step can be followed
 import { spawnSync } from 'child_process';
 import { loadTasks, loadFlows, checkFlow, isRequired } from './load';
 
@@ -40,6 +41,7 @@ function playwright(pass: string[], env: Record<string, string>) {
       ...env,
       ...(watch ? { SLOW: process.env.SLOW || '500' } : {}),
       ...(pwArgs.includes('--headed') ? { CHOREO_HEADED: '1' } : {}), // page fills the visible window
+      ...(watch ? { CHOREO_LIVE: '1' } : {}), // work in the live choreo window, left open after the run
     },
   });
   process.exit(r.status ?? 1);

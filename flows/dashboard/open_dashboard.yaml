@@ -1,0 +1,4 @@
+# Quick repro: just open the Dashboard. Fails if any API call behind it fails (error toast).
+description: Open the Dashboard and expect its Data Sources table to load without an error
+steps:
+  - expectDashboardLoads: {}

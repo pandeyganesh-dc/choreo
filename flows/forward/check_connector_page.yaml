@@ -1,0 +1,8 @@
+# The connector page's pipeline list must agree with a pipeline's own runs tab (status, last run time, rows moved).
+# Needs one Regression pipeline that has run: reuses a recent one, makes one only if none exists.
+description: Expect the connector page's row for a Regression pipeline to agree with its Number Of Runs tab (makes a run only if none exists)
+steps:
+  - findRunPipeline: { connector: Regression, status: SUCCESS, as: p }
+    orElse: { run_regress_regular: {} }
+  - readLatestRun: { connector: Regression, pipeline: $p.pipeline, as: run }
+  - expectConnectorPipelineRow: { connector: Regression, pipeline: $p.pipeline, status: $run.status, runAt: $run.startTime, rows: $run.rows, runs: $run.runs }

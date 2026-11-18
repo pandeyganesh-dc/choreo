@@ -9,7 +9,10 @@ const files = (dir: string, ext: RegExp) =>
   fs.existsSync(path.join(ROOT, dir)) ? fs.readdirSync(path.join(ROOT, dir)).filter(f => ext.test(f)).sort() : [];
 
 // A step calls a task (camelCase) or another flow (kebab-case) the same way: `- name: { input: value, as: label }`
-export type CallStep = { call: string; as?: string; input: Record<string, any> };
+export type Call = { call: string; input: Record<string, any> };
+// `orElse`: "use what's there, or make it". If the step finds nothing (its task returns { found: false }), the orElse
+// call runs instead and its result takes the step's place under the same `as`. Skips work already done (per Ganesh).
+export type CallStep = Call & { as?: string; orElse?: Call };
 // Repeats `steps` once per item of a list (e.g. $list.names); `as` names the current item (default "item")
 export type ForEachStep = { forEach: any; as: string; steps: Step[] };
 export type Step = CallStep | ForEachStep;
@@ -63,9 +66,15 @@ export function loadFlows(): Record<string, Flow> {
 function parseSteps(raw: any): Step[] {
   return (raw ?? []).map((s: any): Step => {
     if (s && 'forEach' in s) return { forEach: s.forEach, as: s.as ?? 'item', steps: parseSteps(s.steps) };
-    const [call, body] = Object.entries(s ?? {})[0] ?? [];
+    const { orElse, ...rest } = s ?? {};
+    const [call, body] = Object.entries(rest)[0] ?? [];
     const { as, ...input } = (body ?? {}) as Record<string, any>;
-    return { call, as, input };
+    const step: CallStep = { call, as, input };
+    if (orElse) {
+      const [eCall, eBody] = Object.entries(orElse)[0] ?? [];
+      step.orElse = { call: eCall, input: (eBody ?? {}) as Record<string, any> };
+    }
+    return step;
   });
 }
 
@@ -130,29 +139,39 @@ function checkSteps(steps: Step[], lib: Lib, known: Known, prefix: string, where
     }
 
     const at = `${where}step ${prefix}${i + 1} (${s.call})`;
-    const task = lib.tasks[s.call];
-    const flow = lib.flows[s.call];
-    if (task && flow) return errors.push(`${at}: "${s.call}" is both a task and a flow; rename one`);
-    if (!task && !flow)
-      return errors.push(
-        `${at}: no task or flow named "${s.call}". Tasks: ${Object.keys(lib.tasks).join(', ')}. Flows: ${Object.keys(lib.flows).join(', ')}`,
-      );
-
-    // A task's inputs, or a flow's params, in one shape
-    const inputs: Record<string, { required: boolean }> = task
-      ? Object.fromEntries(Object.entries(task.inputs).map(([k, spec]) => [k, { required: !!spec.required }]))
-      : Object.fromEntries(Object.entries(flow.params).map(([k, v]) => [k, { required: isRequired(v) }]));
-
-    for (const [k, v] of Object.entries(s.input)) {
-      if (!inputs[k]) errors.push(`${at}: unknown input "${k}" (inputs: ${Object.keys(inputs).join(', ') || 'none'})`);
-      const bad = badRef(v, known);
-      if (bad) errors.push(`${at}: ${bad}`);
+    const flow = checkCall(s, lib, known, at, calls, errors);
+    if (s.orElse) {
+      if (!s.as) errors.push(`${at}: orElse needs "as" (both results go under that name)`);
+      checkCall(s.orElse, lib, known, `${at} orElse (${s.orElse.call})`, calls, errors);
     }
-    for (const [k, spec] of Object.entries(inputs))
-      if (spec.required && !(k in s.input)) errors.push(`${at}: missing required input "${k}"`);
-
-    if (flow) calls.add(s.call);
     // A flow's result has exactly its outputs; a task's result fields aren't declared
-    if (s.as) known.set(s.as, flow ? new Set(Object.keys(flow.outputs)) : null);
+    if (s.as) known.set(s.as, flow && !s.orElse ? new Set(Object.keys(flow.outputs)) : null);
   });
+}
+
+// Checks one call (task or flow) and its inputs. Returns the flow if it calls one.
+function checkCall(s: Call, lib: Lib, known: Known, at: string, calls: Set<string>, errors: string[]): Flow | undefined {
+  const task = lib.tasks[s.call];
+  const flow = lib.flows[s.call];
+  if (task && flow) {
+    errors.push(`${at}: "${s.call}" is both a task and a flow; rename one`);
+    return;
+  }
+  if (!task && !flow) {
+    errors.push(`${at}: no task or flow named "${s.call}". Tasks: ${Object.keys(lib.tasks).join(', ')}. Flows: ${Object.keys(lib.flows).join(', ')}`);
+    return;
+  }
+  // A task's inputs, or a flow's params, in one shape
+  const inputs: Record<string, { required: boolean }> = task
+    ? Object.fromEntries(Object.entries(task.inputs).map(([k, spec]) => [k, { required: !!spec.required }]))
+    : Object.fromEntries(Object.entries(flow.params).map(([k, v]) => [k, { required: isRequired(v) }]));
+  for (const [k, v] of Object.entries(s.input)) {
+    if (!inputs[k]) errors.push(`${at}: unknown input "${k}" (inputs: ${Object.keys(inputs).join(', ') || 'none'})`);
+    const bad = badRef(v, known);
+    if (bad) errors.push(`${at}: ${bad}`);
+  }
+  for (const [k, spec] of Object.entries(inputs))
+    if (spec.required && !(k in s.input)) errors.push(`${at}: missing required input "${k}"`);
+  if (flow) calls.add(s.call);
+  return flow;
 }

@@ -1,0 +1,9 @@
+# Backfill a Regress Regular pipeline for yesterday..today and expect a BACKFILL run that succeeds.
+# Makes its own pipeline: a backfill pauses the pipeline's schedule, so never borrow someone else's.
+description: Create a Regress Regular pipeline, backfill it (yesterday..today), expect a backfill run that succeeds
+outputs:
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_regular: { as: p }
+  - backfillPipeline: { connector: Regression, pipeline: $p.pipeline, as: b }
+  - expectBackfillRun: { connector: Regression, pipeline: $p.pipeline, before: $b.before }

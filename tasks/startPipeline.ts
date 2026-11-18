@@ -11,7 +11,8 @@ export default defineTask({
     connector: { required: true, description: 'Connector name as shown in the UI, e.g. Regression' },
     type: { required: true, description: 'Pipeline type, as titled on its card, e.g. Regular' },
   },
-  screen: i => ({ screen: 'connector', connector: i.connector }),
+  // SetUp: connectorLinked reads the unlink button, which only that tab has
+  screen: i => ({ screen: 'connector', connector: i.connector, tab: 'SetUp' }),
   async run(page, { connector, type }) {
     const d = datasource(page);
     const w = pipelineNew(page);

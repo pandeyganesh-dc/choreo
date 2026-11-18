@@ -1,0 +1,9 @@
+# Dashboard → Forward Stats → Data Sources must include a Regression pipeline's latest run.
+# Needs only SOME Regression pipeline that ran fine in the dashboard's window (last 7 days): uses one if there is,
+# runs a new Regress Regular only if there isn't. Comparisons are lower bounds, so a busy environment is fine.
+description: Expect the Dashboard's Regression row to include a recent successful pipeline run (makes one only if none exists)
+steps:
+  - findRunPipeline: { connector: Regression, status: SUCCESS, withinDays: 6, as: p }
+    orElse: { run_regress_regular: {} }
+  - readLatestRun: { connector: Regression, pipeline: $p.pipeline, as: run }
+  - expectDashboardDataSource: { connector: Regression, runAt: $run.startTime, rows: $run.rows }

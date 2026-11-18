@@ -10,6 +10,13 @@ Playwright (TypeScript) UI automation against a local d-l (frontend `localhost:3
   `- forEach: $list.names` with `steps:` (and optional `as:`, default `item`) repeats steps per item.
   A step can call another flow exactly like a task. A flow returns its `outputs:` and sees only the params passed in.
 - Devs write tasks (code). Anyone writes flows (no code). Prefer reusing flows over repeating their steps.
+- `orElse` (per Ganesh, 2026-11-18): "use what's there, or make it". A flow states what it needs; if that already
+  exists it uses it, and only makes it when it doesn't, like a person would:
+  `- findRunPipeline: { connector: Regression, as: p }` + `orElse: { run_regress_regular: {} }` on the same step.
+  A `find…` task returns `{ found: false }` when nothing fits (it never creates); then the orElse call runs and its
+  result goes under the same `as`. Make things from scratch only when making them IS what's tested (e.g. a new
+  run's effect on the dashboard); when a flow just needs something to exist, find it first.
+- Per bug, two flows: a quick repro (fewest steps, e.g. `open_dashboard`) and a full one that sets up what it needs.
 - **Page** (`pages/<screen>.ts`): the only place selectors live. Tasks use pages; they never use raw selectors.
 - `core/`: loader, checker, runner and CLI. Keep it small; features are added incrementally.
 
@@ -25,6 +32,14 @@ later orchestration etc.
   (credentials + sync type) → one `selectOption` per "Sync Details" dropdown → saveSync. Outputs `sync`.
   A new destination usually needs no new code: list its dropdowns as selectOption steps.
 Seed data for reverse syncs: `seeds/postgres-warehouse.sql` (table `choreo_reverse_source` in Local Postgres).
+
+## The live choreo window (--watch)
+`npm run flow <name> -- --watch` works in one Chrome window that stays open between runs (`core/browser.ts`):
+its own profile in `.browser/` (git-ignored, stays logged in), attached over debugging port 9333 (`CHOREO_PORT`).
+If it isn't open, the run starts it; at the end the run only detaches, so the window stays on whatever screen the
+flow ended on, and the next run continues from there (goTo reads the screen). Login only happens if that tab isn't
+logged in. Chrome tab groups can't be used: they're only reachable from a Chrome extension. Without --watch a
+run is headless in a fresh browser (screenshots, video and trace on failure), as before.
 
 ## Run logs (for Claude)
 Every run writes `logs/<time>_<flow>/run.log` (git-ignored; path printed at the start of a run): params, each step's
@@ -116,3 +131,24 @@ When a flow fails or behaves oddly, read the run.log first. Log from tasks with 
 
 ## Done means
 `npm run flow <a flow using the new task>` passes 3 times in a row (add `-- --repeat-each=3`).
+- Dashboard (sidebar → Dashboard): Forward Stats → "Data Sources" table, one row per connector, totals over the date
+  range (default last 7 days). Clicking a connector's name drills into its "Data Pipelines" table. If any API call
+  behind it fails, the app shows a "Something went wrong. Please try again later." toast. Checks fail on it at once.
+- Checks must hold in a busy environment (STAGING), per Ganesh: compare other screens with our own pipeline's run
+  (readLatestRun), and use lower bounds for totals that other people's runs also feed (connector/dashboard totals).
+- Times: the runs tab shows "2026-11-18, 06:28:49 am", the connector page and dashboard "2026-11-18 06:28:49 AM".
+- Run one flow at a time: two runs at once share `test-results/` and break each other's traces.
+- Settings (sidebar) opens a flyout with collapsed sections (Account Settings, Data Usage, API Management, Workspace):
+  open the section, then its link. Data Usage → Summary opens the Settings page, whose tabs are Account Settings,
+  Data Usage, Workspaces, API Management. Error toasts come in two wordings (`pages/toast.ts`).
+- Back Fill tab: "Custom Run" date inputs (YYYY-MM-DD) + Run; toast "Backfill run was successful." only means the
+  app accepted it. Real backfill runs show under "Backfill Runs:" on that tab.
+- Orchestrations (sidebar → Orchestration): list → "Create New"/"Add orchestrations" opens the editor with a Start node
+  and a "Select A Node" panel (click a type, no dragging). "Datasource" opens a "Configure Datasource" drawer:
+  connector card → pipeline name → Finish. "Schedule & Save" → name + "Manual Run Only" → Submit (toast
+  "Orcehstration added successfully." — the app's spelling). An orchestration's page: breadcrumb
+  "Orchestrations / Edit (<name>)", tabs Setup / Execution History, "Run Orchestration" opens a live
+  "Tasks execution for <name> orchestration:" popup (run status chip + Task Runs table) and reopens it while live.
+- The orchestration editor collapses the sidebar (links lose their labels); readySidebar expands it again.
+- Dashboard Error Details' search box matches report type / datasource slug, not the pipeline name on the cards
+  (same on develop): page through the cards instead.

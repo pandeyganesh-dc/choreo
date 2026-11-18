@@ -1,0 +1,9 @@
+# Quick repro: run an existing orchestration and expect the run COMPLETED and its pipeline task SUCCESS.
+description: Run a named orchestration; expect the run COMPLETED and the named pipeline task SUCCESS
+params:
+  orchestration:       # required: orchestration name
+  pipeline:            # required: the pipeline task inside it to check
+steps:
+  - runOrchestration: { orchestration: $orchestration }
+  - expectOrchestrationRun: { orchestration: $orchestration, status: COMPLETED }
+  - expectOrchestrationTask: { orchestration: $orchestration, pipeline: $pipeline, status: SUCCESS }

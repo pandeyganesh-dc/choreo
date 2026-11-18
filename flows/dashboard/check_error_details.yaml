@@ -1,0 +1,9 @@
+# Dashboard → Error Details must list a failed run of ours at its time.
+# Needs one Regression pipeline whose last run is ERROR (in the dashboard's 7 days): reuses one, or makes one
+# with Evolving Schema Type (run 3 = schema drift) only if none exists.
+description: Expect Dashboard Error Details to list a Regression pipeline's failed run (makes one only if none exists)
+steps:
+  - findRunPipeline: { connector: Regression, status: ERROR, withinDays: 6, as: p }
+    orElse: { run_regress_evolving_schema_type: {} }
+  - readLatestRun: { connector: Regression, pipeline: $p.pipeline, as: run }
+  - expectDashboardErrorDetails: { pipeline: $p.pipeline, runAt: $run.startTime }

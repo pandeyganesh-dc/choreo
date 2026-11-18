@@ -1,0 +1,9 @@
+# Quick repro: backfill a pipeline you name (yesterday..today) and expect a backfill run that succeeds.
+# Pauses that pipeline's schedule (the app does that for every backfill).
+description: Backfill a named pipeline (yesterday..today) and expect a backfill run that succeeds
+params:
+  connector:           # required: connector name as shown in the UI, e.g. Regression
+  pipeline:            # required: the pipeline to backfill (its schedule gets paused)
+steps:
+  - backfillPipeline: { connector: $connector, pipeline: $pipeline, as: b }
+  - expectBackfillRun: { connector: $connector, pipeline: $pipeline, before: $b.before }

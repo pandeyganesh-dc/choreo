@@ -1,0 +1,4 @@
+# Quick repro: open Settings → Data Usage. Fails if any API call behind it fails (error toast).
+description: Open Settings → Data Usage and expect it to load without an error
+steps:
+  - expectSettingsTabLoads: { tab: Data Usage }

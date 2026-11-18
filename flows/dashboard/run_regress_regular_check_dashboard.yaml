@@ -1,0 +1,9 @@
+# Tests a NEW run's effect on the Dashboard, so it always makes its own pipeline and run.
+# (To only check the dashboard against any recent run, use check_forward_stats.)
+description: Create and run a Regress Regular pipeline, then check the Dashboard's Forward Stats include its run
+outputs:
+  pipeline: $r.pipeline
+steps:
+  - run_regress_regular: { as: r }
+  - readLatestRun: { connector: Regression, pipeline: $r.pipeline, as: run }
+  - expectDashboardDataSource: { connector: Regression, runAt: $run.startTime, rows: $run.rows }

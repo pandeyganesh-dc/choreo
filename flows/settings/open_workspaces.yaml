@@ -1,0 +1,4 @@
+# Quick repro: open Settings → Workspaces. Fails if any API call behind it fails (error toast).
+description: Open Settings → Workspaces and expect it to load without an error
+steps:
+  - expectSettingsTabLoads: { tab: Workspaces }

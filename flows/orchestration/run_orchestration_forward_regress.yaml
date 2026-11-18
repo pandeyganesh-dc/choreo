@@ -1,0 +1,13 @@
+# Orchestration with one Forward (ETL) node: create a Regress Regular pipeline, put it in a new manual
+# orchestration, run it, expect the run COMPLETED, the task SUCCESS with 1 row, and the pipeline's own run SUCCESS.
+description: Create a Regress Regular pipeline and an orchestration that runs it; run it and expect task SUCCESS, 1 row
+outputs:
+  orchestration: $o.orchestration
+  pipeline: $p.pipeline
+steps:
+  - create_pipeline_regress_regular: { as: p }
+  - createOrchestration: { connector: Regression, pipeline: $p.pipeline, as: o }
+  - runOrchestration: { orchestration: $o.orchestration }
+  - expectOrchestrationRun: { orchestration: $o.orchestration, status: COMPLETED }
+  - expectOrchestrationTask: { orchestration: $o.orchestration, pipeline: $p.pipeline, status: SUCCESS, rows: 1 }
+  - expectRunStatus: { connector: Regression, pipeline: $p.pipeline, status: SUCCESS }
